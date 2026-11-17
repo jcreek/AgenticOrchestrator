@@ -76,6 +76,8 @@ jobs:
           RUST_TARGET: ${{ matrix.rust-target }}
       - uses: Swatinem/rust-cache@v2
         with:
+          # Preserve preinstalled Rust executables between jobs on the Mac mini.
+          cache-bin: "false"
           key: ${{ matrix.platform }}
       - name: Install frontend dependencies
         run: pnpm -C app install --frozen-lockfile
