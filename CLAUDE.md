@@ -37,6 +37,8 @@ Run the app: `pnpm -C app tauri dev`. Install front-end packages: `pnpm -C app i
 ## Environment notes
 
 - The package manager is pnpm, not npm.
+- On macOS/Linux, run the Rust workspace checks and frontend build/unit tests; `test:bdd` remains Windows-only. Native Mac UI and packaging are later milestones.
+- Use `AGENTIC_ORCHESTRATOR_STATE_DIR` (absolute directory) for isolated app state.
 - Invoke `cargo` and `pnpm` from PATH. A local pre-tool hook rejects any shell command that names a `bin`, `obj`, `dist`, `node_modules`, `coverage` or `.git` path.
 - Status comes from polling `claude agents --json`, matched by the session id the app assigns with `--session-id`.
 - Monaco deep imports are relative to `esm/vs`, e.g. `monaco-editor/editor/editor.worker.js?worker`.

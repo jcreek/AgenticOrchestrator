@@ -12,6 +12,8 @@ use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StateError {
+    #[error("state directory must be absolute and a home directory must be available")]
+    InvalidStateDirectory,
     #[error("LOCALAPPDATA is not set")]
     NoLocalAppData,
     #[error("state file is not valid: {0}")]
@@ -122,7 +124,7 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            shell_program: "pwsh.exe".into(),
+            shell_program: crate::terminal::default_shell(crate::environment::environment()),
             shell_args: Vec::new(),
             extra_claude_args: Vec::new(),
             worktree_root: None,
@@ -139,9 +141,31 @@ impl Default for Settings {
 }
 
 pub fn default_state_path() -> Result<PathBuf, StateError> {
-    state_path_under(std::env::var_os("LOCALAPPDATA"))
+    state_path_with(|name| std::env::var_os(name))
 }
 
+fn state_path_with(get: impl Fn(&str) -> Option<OsString>) -> Result<PathBuf, StateError> {
+    if let Some(folder) = get("AGENTIC_ORCHESTRATOR_STATE_DIR") {
+        let folder = PathBuf::from(folder);
+        return if folder.is_absolute() { Ok(folder.join("state.json")) } else { Err(StateError::InvalidStateDirectory) };
+    }
+    #[cfg(windows)]
+    { state_path_under(get("LOCALAPPDATA")) }
+    #[cfg(unix)]
+    {
+        let home = || get("HOME").map(PathBuf::from).filter(|p| p.is_absolute()).ok_or(StateError::InvalidStateDirectory);
+        #[cfg(target_os = "macos")]
+        let base = home()?.join("Library/Application Support");
+        #[cfg(not(target_os = "macos"))]
+        let base = match get("XDG_DATA_HOME").map(PathBuf::from).filter(|p| p.is_absolute()) {
+            Some(base) => base,
+            None => home()?.join(".local/share"),
+        };
+        Ok(base.join("AgenticOrchestrator/state.json"))
+    }
+}
+
+#[cfg(windows)]
 fn state_path_under(local_app_data: Option<OsString>) -> Result<PathBuf, StateError> {
     let local = PathBuf::from(local_app_data.ok_or(StateError::NoLocalAppData)?);
     if !local.is_absolute() {
@@ -204,7 +228,7 @@ pub fn add_workspace<'a>(
     }
     let canonical = fs::canonicalize(path)?;
     // Stripping `\\?\` below would make Windows trim these names and resolve another folder.
-    let trimmed_name = canonical.components().any(|part| {
+    let trimmed_name = cfg!(windows) && canonical.components().any(|part| {
         matches!(part, Component::Normal(name) if name.to_string_lossy().ends_with(['.', ' ']))
     });
     if trimmed_name || canonical.to_str().is_none() {
@@ -269,6 +293,7 @@ fn dedupe_key(path: &Path) -> String {
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
     #[test]
     fn default_path_is_under_local_app_data() {
         let local = PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap());
@@ -278,6 +303,7 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
     #[test]
     fn state_path_requires_an_absolute_local_app_data() {
         assert_eq!(
@@ -300,7 +326,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let state = load(&dir.path().join("state.json")).unwrap();
         assert_eq!(state, AppState::default());
-        assert_eq!(state.settings.shell_program, "pwsh.exe");
+        assert_eq!(state.settings.shell_program, Settings::default().shell_program);
     }
 
     #[test]
@@ -325,7 +351,7 @@ mod tests {
         let state = load(&path).unwrap();
 
         assert_eq!(state.workspaces[0].claude_session_id, None);
-        assert_eq!(state.settings.shell_program, "pwsh.exe");
+        assert_eq!(state.settings.shell_program, Settings::default().shell_program);
         assert_eq!(state.settings.shell_args, ["-NoLogo"]);
         assert_eq!(state.settings.zoom_percent, 100);
         assert_eq!(state.settings.default_layout, LayoutMode::Both);
@@ -461,6 +487,7 @@ mod tests {
         assert_eq!(order, ["c", "a", "b", "d"]);
     }
 
+    #[cfg(windows)]
     #[test]
     fn add_workspace_rejects_folder_names_ending_in_dot_or_space() {
         let dir = tempfile::tempdir().unwrap();
@@ -536,5 +563,32 @@ mod tests {
         )
         .unwrap();
         assert_eq!(load(&path).unwrap().settings.shell_program, "cmd.exe");
+    }
+}
+
+#[cfg(test)]
+mod platform_path_tests {
+    use super::*;
+
+    #[test]
+    fn override_is_absolute_and_does_not_fall_back() {
+        let dir = tempfile::tempdir().unwrap();
+        let get = |name: &str| (name == "AGENTIC_ORCHESTRATOR_STATE_DIR").then(|| dir.path().as_os_str().to_owned());
+        assert_eq!(state_path_with(get).unwrap(), dir.path().join("state.json"));
+        assert!(matches!(state_path_with(|_| Some("relative".into())), Err(StateError::InvalidStateDirectory)));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_default_uses_the_platform_data_directory() {
+        let path = state_path_with(|name| match name {
+            "HOME" => Some("/home/test".into()),
+            "XDG_DATA_HOME" => Some("/data".into()),
+            _ => None,
+        }).unwrap();
+        #[cfg(target_os = "macos")]
+        assert_eq!(path, Path::new("/home/test/Library/Application Support/AgenticOrchestrator/state.json"));
+        #[cfg(not(target_os = "macos"))]
+        assert_eq!(path, Path::new("/data/AgenticOrchestrator/state.json"));
     }
 }

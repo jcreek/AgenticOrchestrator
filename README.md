@@ -2,7 +2,7 @@
 
 A Windows desktop app for running many Claude Code sessions at once. Each session gets a tab, one per repo folder or git worktree, and the tab shows whether Claude is working, waiting for input, waiting for permission, finished or idle. Each tab has the Claude terminal, extra shells, and a small IDE pane for reading what changed, editing a file and committing.
 
-It runs on Windows only for now; it is meant to become cross-platform. See the [roadmap](docs/roadmap.md).
+Windows remains the supported desktop app. Unix core support is implemented for macOS and Linux; native macOS app behaviour, packaging and full Linux validation remain in progress. See the [roadmap](docs/roadmap.md).
 
 ## Start it
 
@@ -64,11 +64,11 @@ When a session needs you and the window is in the background, Windows shows a no
 
 ## Settings and data
 
-State is stored in `%LOCALAPPDATA%\AgenticOrchestrator\state.json`: the workspace list, Claude session ids and settings. There is no settings screen yet; edit the file while the app is closed.
+State is stored in `%LOCALAPPDATA%\AgenticOrchestrator\state.json`: the workspace list, Claude session ids and settings. Unix core state uses `~/Library/Application Support/AgenticOrchestrator/state.json` on macOS and `$XDG_DATA_HOME/AgenticOrchestrator/state.json` (falling back to `~/.local/share`) on Linux. Set `AGENTIC_ORCHESTRATOR_STATE_DIR` to an absolute directory to isolate state on any platform. There is no settings screen yet; edit the file while the app is closed.
 
 | Setting | Meaning | Default |
 |---|---|---|
-| `shellProgram`, `shellArgs` | The shell for extra terminals | `pwsh.exe` |
+| `shellProgram`, `shellArgs` | The shell for extra terminals | Windows: `pwsh.exe`; Unix: executable `$SHELL`, then `/bin/zsh` (macOS) or `/bin/bash` (Linux) |
 | `extraClaudeArgs` | Arguments added to every `claude` launch | none |
 | `worktreeRoot` | Folder for new worktrees | `<repo>.worktrees` beside the repo |
 | `postCreateCommand` | Command run in a new worktree, as an argument list, e.g. `["pnpm", "install"]` | none |

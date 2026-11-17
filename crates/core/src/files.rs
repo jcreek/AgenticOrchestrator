@@ -11,12 +11,14 @@ pub const MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
 
 const GIT_DIR_NAME: &str = ".git";
 
+#[cfg(windows)]
 const RESERVED_NAMES: [&str; 30] = [
     "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "COM1", "COM2", "COM3", "COM4", "COM5",
     "COM6", "COM7", "COM8", "COM9", "COM¹", "COM²", "COM³", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
     "LPT6", "LPT7", "LPT8", "LPT9", "LPT¹", "LPT²", "LPT³",
 ];
 
+#[cfg(windows)]
 const INVALID_CHARS: [char; 7] = ['<', '>', '"', '|', '?', '*', ':'];
 
 #[derive(Debug, thiserror::Error)]
@@ -156,6 +158,7 @@ fn split_relative(rel: &str) -> Result<Vec<&str>, FileError> {
                 let part = part.to_str().ok_or(FileError::InvalidName)?;
                 // Resolved paths are `\\?\` verbatim, so Windows would create these names
                 // literally instead of normalising them, leaving files most tools cannot open.
+                #[cfg(windows)]
                 if part.contains(INVALID_CHARS)
                     || part.ends_with(['.', ' '])
                     || is_reserved_name(part)
@@ -172,6 +175,7 @@ fn split_relative(rel: &str) -> Result<Vec<&str>, FileError> {
     Ok(parts)
 }
 
+#[cfg(windows)]
 fn is_reserved_name(part: &str) -> bool {
     let stem = part.split('.').next().unwrap_or(part).trim_end();
     RESERVED_NAMES
@@ -236,6 +240,8 @@ fn version_of(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(windows)]
+    #[cfg(windows)]
     use std::process::Command;
     use tempfile::TempDir;
 
@@ -263,11 +269,16 @@ mod tests {
             "../x.txt",
             "a/../../x.txt",
             "a/../b.txt",
-            r"C:\Windows\win.ini",
-            "C:x.txt",
             "/x.txt",
+            #[cfg(windows)]
+            r"C:\Windows\win.ini",
+            #[cfg(windows)]
+            "C:x.txt",
+            #[cfg(windows)]
             r"\x.txt",
+            #[cfg(windows)]
             r"\\server\share\x.txt",
+            #[cfg(windows)]
             r"\\?\C:\x.txt",
             other_abs.to_str().unwrap(),
         ] {
@@ -278,6 +289,7 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
     #[test]
     fn resolve_rejects_device_names_and_streams() {
         let ws = workspace();
@@ -299,7 +311,7 @@ mod tests {
             root.join("src").join("main.rs")
         );
         assert_eq!(
-            resolve(ws.path(), r".\src\new.rs").unwrap(),
+            resolve(ws.path(), "./src/new.rs").unwrap(),
             root.join("src").join("new.rs")
         );
         assert_eq!(resolve(ws.path(), "").unwrap(), root);
@@ -311,13 +323,17 @@ mod tests {
         let outside = workspace();
         write(outside.path(), "secret.txt", b"secret");
         let link = ws.path().join("link");
+        #[cfg(windows)]
         let created = Command::new("cmd")
             .args(["/C", "mklink", "/J"])
             .arg(&link)
             .arg(outside.path())
             .output()
             .is_ok_and(|output| output.status.success());
+        #[cfg(windows)]
         assert!(created, "could not create a junction");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(outside.path(), &link).unwrap();
         for rel in ["link", "link/secret.txt", "link/new.txt"] {
             assert!(
                 matches!(resolve(ws.path(), rel), Err(FileError::OutsideWorkspace)),
@@ -501,6 +517,7 @@ mod tests {
         for rel in [
             format!("{git}/hooks/pre-commit"),
             format!("{upper}/config"),
+            #[cfg(windows)]
             format!(r"{git}\hooks\post-checkout"),
         ] {
             assert!(
@@ -564,6 +581,7 @@ mod tests {
         assert_eq!(fs::read_dir(ws.path()).unwrap().count(), 1);
     }
 
+    #[cfg(windows)]
     #[test]
     fn names_windows_would_not_normalise_are_rejected() {
         let ws = workspace();
@@ -620,5 +638,18 @@ mod tests {
         fs::write(ws.path().join(&name), b"real").unwrap();
         write(ws.path(), "b.txt", b"");
         assert_eq!(names(&list_dir(ws.path(), "").unwrap()), ["b.txt"]);
+    }
+}
+
+#[cfg(all(test, unix))]
+mod unix_path_tests {
+    use super::*;
+    #[test]
+    fn unix_filenames_keep_backslashes_and_windows_reserved_characters() {
+        let dir = tempfile::tempdir().unwrap();
+        for name in ["NUL", "a:b", "trail.", "space ", "a\\b", "a?b"] {
+            write_file(dir.path(), name, "content", None).unwrap();
+            assert_eq!(fs::read_to_string(dir.path().join(name)).unwrap(), "content");
+        }
     }
 }

@@ -171,23 +171,15 @@ fn next_status(
 
 /// Runs `claude agents --json` with a timeout; `None` when it cannot be run or parsed.
 fn query_agents() -> Option<Vec<AgentEntry>> {
-    query_agents_with(&terminal::child_environment(std::env::vars_os()))
+    query_agents_with(orchestrator_core::environment::environment())
 }
 
 fn query_agents_with(env: &terminal::Environment) -> Option<Vec<AgentEntry>> {
-    let mut child = git::hidden_command(terminal::resolve_program("claude", env))
-        .args(["agents", "--json"])
-        .env_clear()
-        .envs(env)
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
-    // An npm install runs through cmd.exe, so only the job reaches the node process behind it.
-    let Ok(tree) = terminal::ProcessTree::adopt(&child) else {
-        let _ = child.kill();
-        let _ = child.wait();
-        return None;
-    };
+    let (mut child, tree) = terminal::ProcessTree::spawn(
+        git::hidden_command(terminal::resolve_program("claude", env))
+            .args(["agents", "--json"])
+            .env_clear().envs(env).stderr(Stdio::null())
+    ).ok()?;
     let mut stdout = child.stdout.take()?;
     let reader = thread::spawn(move || {
         let mut json = String::new();
@@ -313,6 +305,32 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn unix_agents_query_timeout_kills_descendants() {
+        use std::os::unix::fs::PermissionsExt;
+        let folder = tempfile::tempdir().unwrap();
+        let script = folder.path().join("claude");
+        let child_file = folder.path().join("child");
+        std::fs::write(&script, "#!/bin/sh\nsleep 120 &\necho $! > \"$AO_TEST_CHILD\"\nwait\n").unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let mut env = orchestrator_core::environment::environment().clone();
+        let mut paths = vec![folder.path().to_path_buf()];
+        paths.extend(std::env::split_paths(env.get(std::ffi::OsStr::new("PATH")).unwrap()));
+        env.insert("PATH".into(), std::env::join_paths(paths).unwrap());
+        env.insert("AO_TEST_CHILD".into(), child_file.as_os_str().to_owned());
+        let started = Instant::now();
+        assert!(query_agents_with(&env).is_none());
+        assert!(started.elapsed() < Duration::from_secs(7));
+        let pid = std::fs::read_to_string(child_file).unwrap().trim().parse::<u32>().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            if !orchestrator_core::processes::list().iter().any(|row| row["pid"] == pid && row["running"] == true) { break; }
+            assert!(Instant::now() < deadline, "query descendant survived");
+            thread::sleep(Duration::from_millis(20));
+        }
+    }
+
     /// npm layout: `claude.cmd` beside an extensionless sh script, and the real work in a grandchild.
     #[cfg(windows)]
     #[test]
@@ -327,7 +345,7 @@ mod tests {
             format!("@echo off\r\n\"%~dp0{orphan}\" -n 30 127.0.0.1\r\n"),
         )
         .expect("cmd");
-        let mut env = terminal::child_environment(std::env::vars_os());
+        let mut env = orchestrator_core::environment::environment().clone();
         let key = env.keys().find(|name| name.eq_ignore_ascii_case("PATH")).cloned().unwrap_or_else(|| "PATH".into());
         let mut path = folder.path().as_os_str().to_owned();
         path.push(";");

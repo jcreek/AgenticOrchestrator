@@ -5,13 +5,6 @@ use std::time::{Duration, Instant};
 
 use cucumber::{given, then, when};
 use orchestrator_core::terminal::{OutputSink, TerminalId, TerminalManager, TerminalSize, TerminalSpec, child_environment};
-#[cfg(windows)]
-use windows::Win32::Foundation::CloseHandle;
-#[cfg(windows)]
-use windows::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW, TH32CS_SNAPPROCESS,
-};
-
 use crate::{CoreWorld, off_thread};
 
 const TIMEOUT: Duration = Duration::from_secs(20);
@@ -41,8 +34,8 @@ fn start(world: &CoreWorld, command: &str) -> Rig {
         let _ = sender.send((id, code));
     });
     let spec = TerminalSpec {
-        program: "cmd.exe".into(),
-        args: vec!["/c".into(), command.into()],
+        program: if cfg!(windows) { "cmd.exe" } else { "/bin/sh" }.into(),
+        args: vec![if cfg!(windows) { "/c" } else { "-c" }.into(), command.into()],
         cwd: world.dir.path().to_path_buf(),
         size: TerminalSize { cols: 100, rows: 30 },
         env: child_environment(std::env::vars_os()),
@@ -70,27 +63,9 @@ fn sink(output: &Output) -> OutputSink {
     Box::new(move |bytes| output.lock().expect("output lock").extend_from_slice(bytes))
 }
 
-#[cfg(not(windows))]
 fn processes() -> Vec<(u32, u32, String)> {
-    unimplemented!("process listing is only implemented on Windows")
-}
-
-/// (pid, parent pid, exe name) of every process.
-#[cfg(windows)]
-fn processes() -> Vec<(u32, u32, String)> {
-    let mut found = Vec::new();
-    unsafe {
-        let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0).expect("process snapshot");
-        let mut entry = PROCESSENTRY32W { dwSize: size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
-        let mut more = Process32FirstW(snapshot, &raw mut entry).is_ok();
-        while more {
-            let length = entry.szExeFile.iter().position(|c| *c == 0).unwrap_or(0);
-            found.push((entry.th32ProcessID, entry.th32ParentProcessID, String::from_utf16_lossy(&entry.szExeFile[..length])));
-            more = Process32NextW(snapshot, &raw mut entry).is_ok();
-        }
-        let _ = CloseHandle(snapshot);
-    }
-    found
+    orchestrator_core::processes::list().into_iter().filter(|row| row["running"] == true)
+        .map(|row| (row["pid"].as_u64().unwrap() as u32, row["ppid"].as_u64().unwrap() as u32, row["exe"].as_str().unwrap().to_owned())).collect()
 }
 
 fn eventually(what: &str, mut condition: impl FnMut() -> bool) {
@@ -103,7 +78,9 @@ fn eventually(what: &str, mut condition: impl FnMut() -> bool) {
 
 #[given(expr = "a terminal that printed {int} numbered lines and exited")]
 async fn printed_lines(world: &mut CoreWorld, count: u32) {
-    world.terminal = Some(start(world, &format!("for /l %i in (1,1,{count}) do @echo line-%i")));
+    let command = if cfg!(windows) { format!("for /l %i in (1,1,{count}) do @echo line-%i") }
+        else { format!("i=1; while [ $i -le {count} ]; do echo line-$i; i=$((i+1)); done") };
+    world.terminal = Some(start(world, &command));
     assert_eq!(with_rig(world, |rig| rig.exit_code()).await, 0);
 }
 
@@ -124,13 +101,13 @@ fn same_output(world: &mut CoreWorld) {
 
 #[given("a terminal running a command that started a long-running child process")]
 async fn long_running_child(world: &mut CoreWorld) {
-    world.terminal = Some(start(world, "ping -n 120 127.0.0.1"));
+    world.terminal = Some(start(world, if cfg!(windows) { "ping -n 120 127.0.0.1" } else { "sleep 120 & wait" }));
     with_rig(world, |rig| {
         let shell = rig.manager.process_id(rig.id).expect("pid");
         eventually("the child process has started", || {
             rig.child = processes()
                 .into_iter()
-                .find(|(_, parent, exe)| *parent == shell && exe.eq_ignore_ascii_case("PING.EXE"))
+                .find(|(_, parent, exe)| *parent == shell && exe.eq_ignore_ascii_case(if cfg!(windows) { "PING.EXE" } else { "sleep" }))
                 .map(|(pid, _, _)| pid);
             rig.child.is_some()
         });

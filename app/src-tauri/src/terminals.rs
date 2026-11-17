@@ -205,7 +205,7 @@ fn open(
     let _launching = ctx.launching();
     let workspace = ctx.workspace(&workspace_id)?;
     let settings = ctx.state()?.settings;
-    let env = terminal::child_environment(std::env::vars_os());
+    let env = orchestrator_core::environment::environment().clone();
     if kind == TerminalKind::Shell {
         let mut spec = terminal::shell_spec(Some(&settings.shell_program), workspace.path, size, env);
         spec.args = settings.shell_args;

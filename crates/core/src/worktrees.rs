@@ -168,7 +168,7 @@ fn copy_included_files(repo_root: &Path, worktree: &Path) -> Result<(), Worktree
 }
 
 fn expand(repo_root: &Path, pattern: &str) -> Vec<PathBuf> {
-    let pattern = pattern.replace('\\', "/");
+    let pattern = crate::git::normalise_git_path(pattern);
     let (folder, name) = pattern.rsplit_once('/').unwrap_or(("", &pattern));
     let folder = repo_root.join(folder);
     if !name.contains(['*', '?']) {
@@ -207,7 +207,7 @@ fn wildcard_match(pattern: &[u8], name: &[u8]) -> bool {
 
 const RUN_COMMAND_DEADLINE: Duration = Duration::from_secs(15 * 60);
 pub fn run_command(cwd: &Path, argv: &[String]) -> CommandOutput {
-    run_command_with(cwd, argv, &terminal::child_environment(std::env::vars_os()))
+    run_command_with(cwd, argv, crate::environment::environment())
 }
 
 fn run_command_with(cwd: &Path, argv: &[String], env: &terminal::Environment) -> CommandOutput {
@@ -415,7 +415,10 @@ fn unlink_directory_links(folder: &Path) -> std::io::Result<()> {
         let entry = entry?;
         let kind = entry.file_type()?;
         if kind.is_symlink() && entry.path().is_dir() {
+            #[cfg(windows)]
             fs::remove_dir(entry.path())?;
+            #[cfg(unix)]
+            fs::remove_file(entry.path())?;
         } else if kind.is_dir() {
             unlink_directory_links(&entry.path())?;
         }
@@ -625,9 +628,14 @@ mod tests {
     }
 
     fn junction(folder: &Path, name: &str, target: &Path) {
+        #[cfg(windows)]
         let argv: Vec<String> = ["cmd", "/c", "mklink", "/J", name, utf8(target)].map(str::to_owned).into();
+        #[cfg(windows)]
         let made = run_command(folder, &argv);
+        #[cfg(windows)]
         assert!(made.success, "{}", made.output);
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target, folder.join(name)).unwrap();
     }
 
     #[test]
@@ -812,17 +820,18 @@ mod tests {
     #[test]
     fn run_command_gets_the_same_environment_as_terminals() {
         let dir = tempdir().expect("tempdir");
-        let argv: Vec<String> = ["cmd", "/c", "set"].map(str::to_owned).into();
+        let argv: Vec<String> = if cfg!(windows) { vec!["cmd", "/c", "set"] } else { vec!["/usr/bin/env"] }.into_iter().map(str::to_owned).collect();
         let listing = run_command(dir.path(), &argv).output.to_ascii_uppercase();
         assert!(listing.contains("PATH="));
         assert!(listing.contains("TERM=XTERM-256COLOR"));
     }
 
+    #[cfg(windows)]
     #[test]
     fn run_command_finds_a_cmd_shim_on_path() {
         let shims = tempdir().expect("tempdir");
         fs::write(shims.path().join("ao-npm.cmd"), "@echo off\r\necho shim-ran %*\r\n").expect("write");
-        let mut env = terminal::child_environment(std::env::vars_os());
+        let mut env = crate::environment::environment().clone();
         let key = env.keys().find(|name| name.eq_ignore_ascii_case("PATH")).cloned().unwrap_or_else(|| "PATH".into());
         let mut path = shims.path().as_os_str().to_owned();
         path.push(";");
@@ -839,7 +848,7 @@ mod tests {
         let mut content = "x".repeat(2 * OUTPUT_CAP);
         content.push_str("THE END");
         fs::write(dir.path().join("big.txt"), &content).expect("write");
-        let argv: Vec<String> = ["cmd", "/c", "type", "big.txt"].map(str::to_owned).into();
+        let argv: Vec<String> = if cfg!(windows) { vec!["cmd", "/c", "type", "big.txt"] } else { vec!["/bin/cat", "big.txt"] }.into_iter().map(str::to_owned).collect();
         let result = run_command(dir.path(), &argv);
         assert!(result.success);
         assert_eq!(result.output.len(), OUTPUT_CAP);

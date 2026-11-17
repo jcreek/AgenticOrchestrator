@@ -177,11 +177,16 @@ fn slashes(path: &Path) -> String {
 pub fn junction(link: &Path, target: &Path) {
     fs::create_dir_all(link.parent().expect("parent folder")).expect("create parent folder");
     // git reports worktree paths with forward slashes, which mklink reads as switches.
+    #[cfg(windows)]
     let windows_path = |path: &Path| path.to_string_lossy().replace('/', "\\");
+    #[cfg(windows)]
     let made = Command::new("cmd")
         .args(["/C", "mklink", "/J", &windows_path(link), &windows_path(target)])
         .output()
         .expect("run mklink");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, link).expect("symlink");
+    #[cfg(windows)]
     assert!(made.status.success(), "could not create a junction: {}", String::from_utf8_lossy(&made.stderr));
 }
 

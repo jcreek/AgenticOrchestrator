@@ -90,6 +90,7 @@ pub struct BranchFile {
 pub fn hidden_command(program: impl AsRef<std::ffi::OsStr>) -> Command {
     let mut command = Command::new(program);
     command
+        .env_clear().envs(crate::environment::environment())
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -178,7 +179,7 @@ fn git_command(root: &Path, args: &[&str]) -> Command {
     for name in REDIRECTING_VARS {
         command.env_remove(name);
     }
-    for (name, _) in std::env::vars_os() {
+    for name in crate::environment::environment().keys() {
         if name.to_string_lossy().to_ascii_uppercase().starts_with("GIT_CONFIG") {
             command.env_remove(name);
         }
@@ -409,11 +410,11 @@ fn tracked_change(xy: &[u8], path: &str, original: Option<&str>) -> ChangedFile 
 
 fn change(path: &str, staged: bool, unstaged: bool, kind: FileKind, original: Option<&str>) -> ChangedFile {
     ChangedFile {
-        path: path.replace('\\', "/"),
+        path: normalise_git_path(path),
         staged,
         unstaged,
         kind,
-        original_path: original.map(|original| original.replace('\\', "/")),
+        original_path: original.map(normalise_git_path),
         added: None,
         removed: None,
     }
@@ -429,7 +430,7 @@ pub fn file_at_merge_base(root: &Path, path: &str, base: &str) -> Result<Option<
 
 fn file_at(root: &Path, rev: &str, path: &str) -> Result<Option<String>, GitError> {
     // "./" makes git read the path relative to the folder rather than the repository root.
-    let spec = format!("{rev}:./{}", path.replace('\\', "/"));
+    let spec = format!("{rev}:./{}", normalise_git_path(path));
     let found = run(
         root,
         &["rev-parse", "--verify", "--quiet", "--end-of-options", &spec],
@@ -615,7 +616,7 @@ pub fn parse_numstat(raw: &str) -> Result<HashMap<String, (u32, u32)>, GitError>
                 .ok_or(GitError::UnexpectedOutput)?;
         }
         if let (Ok(added), Ok(removed)) = (added.parse(), removed.parse()) {
-            counts.insert(path.replace('\\', "/"), (added, removed));
+            counts.insert(normalise_git_path(path), (added, removed));
         }
     }
     Ok(counts)
@@ -631,6 +632,15 @@ pub fn list_branches(root: &Path) -> Result<Branches, GitError> {
         local: text(&raw).lines().map(str::to_owned).collect(),
     })
 }
+
+/// Git paths use slash separators; a backslash is a literal filename character on Unix.
+pub fn normalise_git_path(path: &str) -> String {
+    #[cfg(windows)]
+    { path.replace('\\', "/") }
+    #[cfg(unix)]
+    { path.to_owned() }
+}
+
 
 #[cfg(test)]
 pub(crate) mod test_support {
@@ -1072,6 +1082,9 @@ mod tests {
         let hooks = repo.join(".git").join("hooks");
         fs::create_dir_all(&hooks).expect("hooks dir");
         fs::write(hooks.join(name), format!("#!/bin/sh\n{body}\n")).expect("hook");
+        #[cfg(unix)]
+        { use std::os::unix::fs::PermissionsExt;
+          fs::set_permissions(hooks.join(name), fs::Permissions::from_mode(0o700)).unwrap(); }
     }
 
     #[test]
@@ -1142,11 +1155,11 @@ mod tests {
         let command = git_command(Path::new("."), &["status"]);
         let removed: Vec<String> = command
             .get_envs()
-            .filter(|(_, value)| value.is_none())
+            .filter(|(_, value)| value.is_some())
             .map(|(name, _)| name.to_string_lossy().to_ascii_uppercase())
             .collect();
         for name in REDIRECTING_VARS {
-            assert!(removed.contains(&name.to_owned()), "{name} is inherited");
+            assert!(!removed.contains(&name.to_owned()), "{name} is inherited");
         }
     }
 }

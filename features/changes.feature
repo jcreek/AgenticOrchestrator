@@ -60,7 +60,7 @@ Feature: Reading and editing changes
       | path                  | reason                          |
       | ../outside.txt        | the path is outside the workspace |
       | linked/new.txt        | the path is outside the workspace |
-      | C:/Windows/evil.txt   | the path is outside the workspace |
+      | /ao-outside-workspace/evil.txt   | the path is outside the workspace |
       | .git/hooks/pre-commit | the path is inside the git directory |
       | .GIT/config           | the path is inside the git directory |
 

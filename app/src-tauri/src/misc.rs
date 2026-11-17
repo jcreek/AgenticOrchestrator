@@ -1,6 +1,6 @@
 use std::process::Stdio;
 
-use orchestrator_core::{files, fonts, git, state, terminal};
+use orchestrator_core::{files, fonts, git, state};
 use serde::Serialize;
 use tauri::AppHandle;
 
@@ -34,18 +34,19 @@ pub async fn open_in_vscode(
             }
             args.extend(["-g".to_owned(), target]);
         }
-        if !args.iter().all(|arg| cmd_safe(arg)) {
+        if cfg!(windows) && !args.iter().all(|arg| cmd_safe(arg)) {
             return Err(AppError::new(
                 ErrorKind::InvalidArgument,
                 "the path contains characters that cannot be passed to VS Code safely",
             ));
         }
-        let code = which::which("code")
+        let env = orchestrator_core::environment::environment();
+        let code = which::which_in("code", env.get(std::ffi::OsStr::new("PATH")), &root)
             .map_err(|_| AppError::new(ErrorKind::ToolMissing, "VS Code ('code') is not on PATH"))?;
         git::hidden_command(code)
             .args(&args)
             .env_clear()
-            .envs(terminal::child_environment(std::env::vars_os()))
+            .envs(env)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
@@ -69,9 +70,9 @@ pub struct ToolCheck {
 pub async fn check_tools() -> AppResult<ToolCheck> {
     blocking(|| {
         Ok(ToolCheck {
-            claude: which::which("claude").is_ok(),
-            git: which::which("git").is_ok(),
-            code: which::which("code").is_ok(),
+            claude: tool_exists("claude"),
+            git: tool_exists("git"),
+            code: tool_exists("code"),
         })
     })
     .await
@@ -82,6 +83,11 @@ pub async fn check_tools() -> AppResult<ToolCheck> {
 #[specta::specta]
 pub async fn detect_nerd_font() -> AppResult<Option<String>> {
     blocking(|| Ok(fonts::nerd_font_family(&fonts::installed_font_names()))).await
+}
+
+fn tool_exists(program: &str) -> bool {
+    let env = orchestrator_core::environment::environment();
+    which::which_in(program, env.get(std::ffi::OsStr::new("PATH")), std::env::current_dir().unwrap_or_default()).is_ok()
 }
 
 #[cfg(test)]

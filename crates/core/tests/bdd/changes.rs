@@ -176,7 +176,7 @@ fn nothing_written(world: &mut CoreWorld, name: String) {
     let outside = world.outside.clone().expect("outside folder");
     assert_eq!(fs::read_dir(&outside).expect("list outside folder").count(), 0, "a file appeared outside");
     assert!(!world.dir.path().join("outside.txt").exists());
-    assert!(!Path::new(r"C:\Windows\evil.txt").exists());
+    assert!(!Path::new("/ao-outside-workspace/evil.txt").exists());
     let git_dir = repo.join(".git");
     assert!(!git_dir.join("hooks").join("pre-commit").exists());
     assert!(!read(&git_dir.join("config")).contains("payload"));

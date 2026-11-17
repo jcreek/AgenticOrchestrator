@@ -1,3 +1,4 @@
+pub mod environment;
 pub mod files;
 pub mod fonts;
 pub mod git;
@@ -6,3 +7,4 @@ pub mod status;
 pub mod terminal;
 pub mod watch;
 pub mod worktrees;
+pub mod processes;

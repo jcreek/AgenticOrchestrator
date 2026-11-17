@@ -10,6 +10,10 @@ Three layers, from fast and narrow to slow and whole.
 
 Write a rule as a `@core` scenario when the core alone decides it (a save conflict, a removal blocker). Write a `@ui` scenario when it depends on the window: what a tab shows, a dialog, a key press, a reload.
 
+The Rust workspace tests (including `@core`) and frontend unit tests support macOS. The `@ui` harness remains Windows-only because it drives WebView2 over CDP. Linux UI automation and native macOS smoke validation remain later milestones; passing core checks does not establish a fully supported Mac app.
+
+Core fixtures use Unix executable shell scripts and symlinks on macOS/Linux, and Windows commands and junctions on Windows. Process cleanup tests run native process-group/Job-object operations; run them with access to process APIs and filesystem watching. State-path tests inject directory inputs rather than modifying global environment variables.
+
 ## Run
 
 ```

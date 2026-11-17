@@ -7,7 +7,7 @@ Feature: Worktrees
   Scenario: A new worktree sits beside the repository on its own branch
     Given a repository "alpha" with a remote
     When I create a worktree of "alpha" on the new branch "feature/login"
-    Then the worktree is in the folder "alpha.worktrees\feature-login" beside "alpha"
+    Then the worktree is in the folder "alpha.worktrees/feature-login" beside "alpha"
     And the worktree is on the branch "feature/login"
     And the branch "feature/login" does not track "main"
 

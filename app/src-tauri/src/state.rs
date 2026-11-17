@@ -35,6 +35,7 @@ struct Store {
 
 impl Ctx {
     pub fn load(app: &AppHandle, poll_wake: SyncSender<()>) -> Self {
+        let _ = orchestrator_core::environment::environment();
         let loaded = state::default_state_path().and_then(|path| Ok((state::load(&path)?, path)));
         let store = match loaded {
             Ok((state, path)) => Store {

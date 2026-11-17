@@ -1,12 +1,12 @@
 # Cross-platform roadmap: macOS first, then Linux
 
-The app runs on Windows only. This is the plan for macOS and then Linux. It comes from an audit of the code in November 2026.
+The supported desktop app is Windows-only. Unix core support is implemented; the remaining desktop work targets macOS and then Linux. It comes from an audit of the code in November 2026.
 
 Items marked *(inferred)* come from knowledge of the platforms, not from running anything. They must be confirmed on a real Mac.
 
 ## Where we start
 
-- **Nothing builds off Windows.** `crates/core`, `crates/claude-stub` and `app/src-tauri` all use Windows APIs unconditionally.
+- **Phase 1 guards are implemented.** Windows APIs and dependencies are gated; Unix core implementations are now present. Native macOS app behaviour and packaging remain separate milestones.
 - **The terminal layer is mostly portable.** It uses `portable-pty`, not ConPTY directly. The Windows-only parts are process-tree killing (Job objects), font discovery (registry), the state folder (`%LOCALAPPDATA%`) and a set of path rules.
 - **The `@ui` tests cannot run on macOS.** The harness drives WebView2 over the Chrome DevTools Protocol. WKWebView offers neither that nor a WebDriver route that Tauri supports.
 - **There is no CI and no signing.**
@@ -20,7 +20,7 @@ Items marked *(inferred)* come from knowledge of the platforms, not from running
 
 Linux would be the cheaper platform to test (free CI runners, and a WebDriver route for `@ui`). macOS first means the first port relies on manual UI testing. Phase 2 is shared Unix work, so Linux gets most of its core port either way.
 
-## Phase 1: Make the workspace compile everywhere (small)
+## Phase 1: Make the workspace compile everywhere (implemented)
 
 No behaviour change. Windows-only code is gated with `#[cfg(windows)]`, and other platforms get a stub that returns an error or an empty result.
 
@@ -35,9 +35,9 @@ No behaviour change. Windows-only code is gated with `#[cfg(windows)]`, and othe
 
 **Exit:** the five checks pass on Windows; `cargo clippy --workspace --all-targets -- -D warnings` passes on a Mac.
 
-## Phase 2: Unix implementation in core (the largest phase)
+## Phase 2: Unix implementation in core (implemented; Windows verification pending)
 
-Shared by macOS and Linux. All logic goes in `crates/core` with tests.
+Shared by macOS and Linux. All logic goes in `crates/core` with tests. The implementation includes Unix PTY/process groups, a cached filtered login-shell environment, platform shell/program resolution, platform state paths with `AGENTIC_ORCHESTRATOR_STATE_DIR`, CoreText/fontconfig font discovery, Unix path handling and portable test fixtures. The macOS Rust workspace tests, core BDD scenarios and strict clippy pass, as do the frontend build and unit tests. Core and stub code (including tests) cross-compiles for Windows and Linux targets. Linux execution and all five Windows checks still need native verification.
 
 1. **Process trees** (`terminal.rs`). A process group and `killpg` in place of Job objects. `ProcessTree::adopt` takes an already-spawned child, but on Unix the group must be set before spawn, so its shape changes; the one outside caller is `app/src-tauri/src/status.rs`. A signalled process does not return `KILLED_EXIT_CODE`, so "killed by us" needs recording separately. Known limit: a process that starts its own session escapes the kill, which a Job object prevents.
 2. **Login-shell environment** *(inferred)*. A Mac app started from Finder gets a minimal `PATH`, so `claude`, Homebrew `git` and `code` are not found. Capture the login shell's environment once at startup and feed it to `child_environment` in place of the app's own environment. The existing filter still runs on the captured set.

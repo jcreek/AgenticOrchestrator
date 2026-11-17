@@ -45,7 +45,7 @@ flowchart LR
 
 ## Terminals
 
-- Each terminal is a ConPTY session created by `portable-pty`, with its process in a Windows Job Object so that killing or closing it ends the whole process tree.
+- Each terminal uses `portable-pty`: ConPTY plus a Job object on Windows, a PTY plus an owned session and process groups on Unix. Killing, removing or dropping a terminal cleans up the groups in its session, including shell job-control groups. Unix descendants that create a new session can escape this cleanup. Explicit kills preserve the application’s killed exit code independently of OS signal exit status.
 - Sessions live in the backend, not the page. Output goes into a 2 MB scrollback buffer and to the attached sink. Attaching replays the scrollback, then streams live, so a tab switch or a webview reload never loses a terminal.
 - Output reaches xterm.js as raw bytes over a Tauri `Channel`. The first chunk after idle is sent at once; later output is batched for up to 8 ms or 64 KB.
 - Terminals start with the app's environment minus variables that belong to a parent terminal or Claude Code session (for example `NO_COLOR`, `WT_SESSION`, `CLAUDECODE`), plus `TERM` and `COLORTERM`.

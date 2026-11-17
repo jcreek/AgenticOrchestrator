@@ -16,12 +16,23 @@ use uuid::Uuid;
 #[cfg(windows)]
 #[path = "terminal/job_windows.rs"]
 mod job;
-#[cfg(not(windows))]
-#[path = "terminal/job_unsupported.rs"]
+#[cfg(unix)]
+#[path = "terminal/job_unix.rs"]
 mod job;
 use job::{Job, join_job};
 
-pub const DEFAULT_SHELL: &str = "pwsh.exe";
+pub fn default_shell(env: &Environment) -> String {
+    #[cfg(windows)]
+    { let _ = env; "pwsh.exe".into() }
+    #[cfg(unix)]
+    {
+        env.get(OsStr::new("SHELL")).filter(|shell| {
+            Path::new(shell).is_absolute() && executable(Path::new(shell))
+        }).map(|shell| shell.to_string_lossy().into_owned()).unwrap_or_else(|| {
+            if cfg!(target_os = "macos") { "/bin/zsh" } else { "/bin/bash" }.into()
+        })
+    }
+}
 /// Exit code reported for a session ended by [`TerminalManager::kill`] or
 /// [`TerminalManager::remove`]. Spells "KILL" in ASCII so it cannot be mistaken for a program's own.
 pub const KILLED_EXIT_CODE: u32 = 0x4B49_4C4C;
@@ -31,8 +42,11 @@ const READ_BUFFER_BYTES: usize = 64 * 1024;
 const COALESCE_WINDOW: Duration = Duration::from_millis(8);
 const COALESCE_MAX_BYTES: usize = 64 * 1024;
 const UNKNOWN_EXIT_CODE: u32 = u32::MAX;
+#[cfg(windows)]
 const CURSOR_POSITION_QUERY: &[u8] = b"\x1b[6n";
+#[cfg(windows)]
 const CURSOR_POSITION_REPLY: &[u8] = b"\x1b[1;1R";
+#[cfg(windows)]
 const DEFAULT_PATHEXT: &str = ".COM;.EXE;.BAT;.CMD";
 const BATCH_METACHARACTERS: &[char] = &['"', '&', '|', '<', '>', '^', '%', '!', '\r', '\n'];
 const TRACKED_MODES: &[u16] = &[25, 1000, 1002, 1003, 1004, 1006, 2004, 9001];
@@ -111,6 +125,7 @@ pub enum TerminalError {
     UnsafeBatchArgument(String),
     #[error("pseudo console failed: {0}")]
     Pty(String),
+    #[cfg(windows)]
     #[error("job object failed: {0}")]
     Job(#[from] job::Error),
     #[error("terminal I/O failed: {0}")]
@@ -146,7 +161,7 @@ pub fn shell_spec(
     env: Environment,
 ) -> TerminalSpec {
     TerminalSpec {
-        program: program.unwrap_or(DEFAULT_SHELL).to_owned(),
+        program: program.map(str::to_owned).unwrap_or_else(|| default_shell(&env)),
         args: Vec::new(),
         cwd,
         size,
@@ -225,19 +240,21 @@ impl TerminalManager {
         for (name, value) in &spec.env {
             command.env(name, value);
         }
+        let reader = pair.master.try_clone_reader().map_err(pty_error)?;
+        let writer = pair.master.take_writer().map_err(pty_error)?;
         let mut child = pair.slave.spawn_command(command).map_err(pty_error)?;
         drop(pair.slave);
         if let Err(error) = join_job(&job, child.as_mut()) {
             let _ = child.kill();
+            let _ = child.wait();
             return Err(error);
         }
 
-        let reader = pair.master.try_clone_reader().map_err(pty_error)?;
-        let writer = pair.master.take_writer().map_err(pty_error)?;
         let id = TerminalId(self.next_id.fetch_add(1, Ordering::Relaxed));
         let session = Arc::new(Session {
             id,
             pid: child.process_id().unwrap_or_default(),
+            exit: Mutex::new(ExitState::Running),
             master: Mutex::new(Some(pair.master)),
             writer: Mutex::new(Some(writer)),
             job,
@@ -255,6 +272,12 @@ impl TerminalManager {
             let exit_code = child
                 .wait()
                 .map_or(UNKNOWN_EXIT_CODE, |status| status.exit_code());
+            let exit_code = {
+                let mut state = lock(&session.exit);
+                let code = if matches!(*state, ExitState::Killed) { KILLED_EXIT_CODE } else { exit_code };
+                *state = ExitState::Exited;
+                code
+            };
             let _ = session.job.terminate();
             session.close_pty();
             let _ = delivery.join();
@@ -287,7 +310,7 @@ impl TerminalManager {
     }
 
     pub fn kill(&self, id: TerminalId) -> Result<(), TerminalError> {
-        self.session(id)?.job.terminate()
+        self.session(id)?.kill()
     }
 
     pub fn process_id(&self, id: TerminalId) -> Result<u32, TerminalError> {
@@ -317,7 +340,7 @@ impl TerminalManager {
         let session = lock(&self.sessions)
             .remove(&id)
             .ok_or(TerminalError::NotFound(id))?;
-        let killed = session.job.terminate();
+        let killed = session.kill();
         session.close_pty();
         killed.map(|()| session)
     }
@@ -333,14 +356,17 @@ impl TerminalManager {
 impl Drop for TerminalManager {
     fn drop(&mut self) {
         for session in lock(&self.sessions).values() {
-            let _ = session.job.terminate();
+            let _ = session.kill();
         }
     }
 }
 
+enum ExitState { Running, Killed, Exited }
+
 struct Session {
     id: TerminalId,
     pid: u32,
+    exit: Mutex<ExitState>,
     // Separate locks so a write blocked on a full input pipe cannot hold up resize or close.
     master: Mutex<Option<Box<dyn MasterPty + Send>>>,
     writer: Mutex<Option<Box<dyn Write + Send>>>,
@@ -349,6 +375,14 @@ struct Session {
 }
 
 impl Session {
+    fn kill(&self) -> Result<(), TerminalError> {
+        let mut state = lock(&self.exit);
+        if matches!(*state, ExitState::Exited) { return Ok(()); }
+        self.job.terminate()?;
+        *state = ExitState::Killed;
+        Ok(())
+    }
+
     fn write_input(&self, bytes: &[u8]) -> Result<(), TerminalError> {
         let mut writer = lock(&self.writer);
         let writer = writer.as_mut().ok_or(TerminalError::Exited(self.id))?;
@@ -481,6 +515,7 @@ fn tracked_mode(param: &[u8]) -> Option<u16> {
 
 /// Finds a bare program name on the spec's PATH, trying only PATHEXT extensions: npm puts an
 /// extensionless sh script beside its `.cmd` shim, and that script cannot be started.
+#[cfg(windows)]
 pub fn resolve_program(program: &str, env: &Environment) -> OsString {
     let path = Path::new(program);
     if path.extension().is_some() || path.components().count() > 1 {
@@ -508,25 +543,44 @@ pub fn resolve_program(program: &str, env: &Environment) -> OsString {
     program.into()
 }
 
+#[cfg(unix)]
+pub fn resolve_program(program: &str, env: &Environment) -> OsString {
+    if Path::new(program).components().count() > 1 { return program.into(); }
+    for folder in std::env::split_paths(env.get(OsStr::new("PATH")).map(OsString::as_os_str).unwrap_or_default()) {
+        let candidate = folder.join(program);
+        if folder.is_absolute() && executable(&candidate) { return candidate.into_os_string(); }
+    }
+    program.into()
+}
+
+#[cfg(unix)]
+fn executable(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    path.metadata().is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+}
+
 fn is_batch_file(program: &OsStr) -> bool {
-    Path::new(program).extension().is_some_and(|extension| {
+    cfg!(windows) && Path::new(program).extension().is_some_and(|extension| {
         extension.eq_ignore_ascii_case("cmd") || extension.eq_ignore_ascii_case("bat")
     })
 }
 
-fn read_output(mut reader: Box<dyn Read + Send>, session: &Session, chunks: &Sender<Vec<u8>>) {
+fn read_output(mut reader: Box<dyn Read + Send>, _session: &Session, chunks: &Sender<Vec<u8>>) {
     let mut buffer = vec![0u8; READ_BUFFER_BYTES];
+    #[cfg(windows)]
     let mut answered_cursor_query = false;
     while let Ok(read) = reader.read(&mut buffer) {
         if read == 0 {
             break;
         }
+        #[allow(unused_mut)]
         let mut chunk = buffer[..read].to_vec();
         // ConPTY is opened with INHERIT_CURSOR and stalls until its startup query is answered.
         // Answering here keeps unattached sessions running and keeps the query out of replays.
+        #[cfg(windows)]
         if !answered_cursor_query && let Some(at) = find(&chunk, CURSOR_POSITION_QUERY) {
             chunk.drain(at..at + CURSOR_POSITION_QUERY.len());
-            let _ = session.write_input(CURSOR_POSITION_REPLY);
+            let _ = _session.write_input(CURSOR_POSITION_REPLY);
             answered_cursor_query = true;
         }
         if !chunk.is_empty() && chunks.send(chunk).is_err() {
@@ -568,6 +622,34 @@ pub struct ProcessTree {
 }
 
 impl ProcessTree {
+    #[cfg(unix)]
+    fn from_child(child: &std::process::Child) -> Result<Self, TerminalError> {
+        let job = Job::new()?;
+        job.set_group(child.id())?;
+        Ok(Self { _job: job })
+    }
+
+    /// Spawn with process ownership established before Unix exec; dropping the tree kills descendants.
+    pub fn spawn(command: &mut std::process::Command) -> Result<(std::process::Child, Self), TerminalError> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            // setsid is async-signal-safe and creates a group isolated from the app.
+            unsafe { command.pre_exec(|| {
+                if libc::setsid() < 0 { Err(std::io::Error::last_os_error()) } else { Ok(()) }
+            }); }
+        }
+        let mut child = command.spawn()?;
+        #[cfg(unix)]
+        let tree = Self::from_child(&child);
+        #[cfg(windows)]
+        let tree = Self::adopt(&child);
+        match tree {
+            Ok(tree) => Ok((child, tree)),
+            Err(error) => { let _ = child.kill(); let _ = child.wait(); Err(error) }
+        }
+    }
+    #[cfg(windows)]
     pub fn adopt(child: &std::process::Child) -> Result<Self, TerminalError> {
         let job = Job::new()?;
         job.assign_child(child)?;
@@ -588,6 +670,7 @@ fn pty_error(error: impl fmt::Display) -> TerminalError {
     TerminalError::Pty(format!("{error:#}"))
 }
 
+#[cfg(windows)]
 fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack
         .windows(needle.len())
@@ -1121,6 +1204,7 @@ mod tests {
         let session = Session {
             id: TerminalId(0),
             pid: 0,
+            exit: Mutex::new(ExitState::Running),
             master: Mutex::new(None),
             writer: Mutex::new(None),
             job: Job::new().expect("job"),
@@ -1177,5 +1261,134 @@ mod tests {
         manager.attach(id, sink).expect("attach");
         assert_eq!(expect_exit(&exits, id), 0);
         assert!(text(&collected).contains("Claude Code"), "{:?}", text(&collected));
+    }
+}
+
+#[cfg(all(test, unix))]
+mod unix_tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    fn spec(dir: &Path, command: &str) -> TerminalSpec {
+        TerminalSpec { program: "/bin/sh".into(), args: vec!["-c".into(), command.into()],
+            cwd: dir.into(), size: TerminalSize { cols: 80, rows: 24 },
+            env: child_environment(std::env::vars_os()) }
+    }
+
+    fn rig() -> (TerminalManager, Receiver<(TerminalId, u32)>) {
+        let (sent, received) = mpsc::channel();
+        (TerminalManager::new(move |id, code| { let _ = sent.send((id, code)); }), received)
+    }
+
+    fn wait_for(mut condition: impl FnMut() -> bool) {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !condition() {
+            assert!(Instant::now() < deadline, "condition timed out");
+            thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    fn running(pid: u32) -> bool {
+        crate::processes::snapshot().expect("process listing").iter().any(|p| p["pid"] == pid && p["running"] == true)
+    }
+
+    #[test]
+    fn natural_exit_preserves_code_and_unix_cursor_query() {
+        let dir = tempfile::tempdir().unwrap();
+        let (manager, exits) = rig();
+        let id = manager.spawn(spec(dir.path(), "printf '\\033[6nhello'; exit 7")).unwrap();
+        assert_eq!(exits.recv_timeout(Duration::from_secs(5)).unwrap(), (id, 7));
+        let bytes = Arc::new(Mutex::new(Vec::new()));
+        let output = Arc::clone(&bytes);
+        manager.attach(id, Box::new(move |chunk| lock(&output).extend_from_slice(chunk))).unwrap();
+        assert_eq!(&*lock(&bytes), b"\x1b[6nhello");
+        assert!(exits.try_recv().is_err());
+    }
+
+    #[test]
+    fn explicit_kill_remove_and_drop_end_descendants() {
+        for action in ["kill", "remove", "drop"] {
+            let dir = tempfile::tempdir().unwrap();
+            let (manager, exits) = rig();
+            let id = manager.spawn(spec(dir.path(), "sleep 120 & echo $! > child; wait")).unwrap();
+            let file = dir.path().join("child");
+            wait_for(|| std::fs::read_to_string(&file).is_ok_and(|s| s.trim().parse::<u32>().is_ok()));
+            let pid = std::fs::read_to_string(file).unwrap().trim().parse::<u32>().unwrap();
+            match action {
+                "kill" => manager.kill(id).unwrap(),
+                "remove" => assert!(manager.remove_and_wait(id, Duration::from_secs(5)).unwrap()),
+                _ => drop(manager),
+            }
+            assert_eq!(exits.recv_timeout(Duration::from_secs(5)).unwrap(), (id, KILLED_EXIT_CODE));
+            wait_for(|| !running(pid));
+            assert!(exits.try_recv().is_err());
+        }
+    }
+
+    #[test]
+    fn cleanup_reaches_separate_job_control_groups() {
+        let dir = tempfile::tempdir().unwrap();
+        let (manager, exits) = rig();
+        let mut command = spec(dir.path(), "set -m; sleep 120 & echo $! > child; wait");
+        command.program = "/bin/bash".into();
+        let id = manager.spawn(command).unwrap();
+        let file = dir.path().join("child");
+        wait_for(|| std::fs::read_to_string(&file).is_ok_and(|s| s.trim().parse::<u32>().is_ok()));
+        let pid = std::fs::read_to_string(file).unwrap().trim().parse::<u32>().unwrap();
+        assert_ne!(unsafe { libc::getpgid(pid as i32) }, manager.process_id(id).unwrap() as i32);
+        manager.kill(id).unwrap();
+        assert_eq!(exits.recv_timeout(Duration::from_secs(5)).unwrap().1, KILLED_EXIT_CODE);
+        wait_for(|| !running(pid));
+    }
+
+    #[test]
+    fn natural_exit_cleans_background_children() {
+        let dir = tempfile::tempdir().unwrap();
+        let (manager, exits) = rig();
+        manager.spawn(spec(dir.path(), "sleep 120 & echo $! > child; exit 0")).unwrap();
+        assert_eq!(exits.recv_timeout(Duration::from_secs(5)).unwrap().1, 0);
+        let pid = std::fs::read_to_string(dir.path().join("child")).unwrap().trim().parse::<u32>().unwrap();
+        wait_for(|| !running(pid));
+    }
+
+    #[test]
+    fn process_tree_owns_a_separate_group_and_kills_descendants() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut child, tree) = ProcessTree::spawn(std::process::Command::new("/bin/sh")
+            .args(["-c", "sleep 120 & echo $! > child; wait"]).current_dir(dir.path())).unwrap();
+        assert_ne!(unsafe { libc::getpgid(child.id() as i32) }, unsafe { libc::getpgrp() });
+        let file = dir.path().join("child");
+        wait_for(|| std::fs::read_to_string(&file).is_ok_and(|s| s.trim().parse::<u32>().is_ok()));
+        let pid = std::fs::read_to_string(file).unwrap().trim().parse::<u32>().unwrap();
+        drop(tree);
+        assert!(!child.wait().unwrap().success());
+        wait_for(|| !running(pid));
+    }
+
+    #[test]
+    fn shell_and_resolution_require_executable_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let program = dir.path().join("tool");
+        std::fs::write(&program, "#!/bin/sh\nexit 0\n").unwrap();
+        let mut env = Environment::from([("PATH".into(), dir.path().as_os_str().to_owned()), ("SHELL".into(), program.as_os_str().to_owned())]);
+        assert_eq!(resolve_program("tool", &env), OsStr::new("tool"));
+        assert_ne!(default_shell(&env), program.to_str().unwrap());
+        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o700)).unwrap();
+        assert_eq!(resolve_program("tool", &env), program.as_os_str());
+        assert_eq!(default_shell(&env), program.to_str().unwrap());
+        env.insert("SHELL".into(), "relative".into());
+        assert!(Path::new(&default_shell(&env)).is_absolute());
+    }
+
+    #[test]
+    fn failed_startup_does_not_emit_an_exit() {
+        let dir = tempfile::tempdir().unwrap();
+        let (manager, exits) = rig();
+        let mut command = spec(dir.path(), "");
+        command.program = "/ao-no-such-executable".into();
+        assert!(manager.spawn(command).is_err());
+        assert!(exits.try_recv().is_err());
+        command = spec(&dir.path().join("missing"), "");
+        assert!(matches!(manager.spawn(command), Err(TerminalError::MissingDirectory(_))));
     }
 }

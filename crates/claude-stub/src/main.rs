@@ -81,7 +81,6 @@ fn interactive(dir: &Path, flag: &str, id: &str) {
         eprintln!("stub claude: cannot write to {}: {error}", dir.display());
         process::exit(2);
     }
-    #[cfg(windows)]
     raw_console_input();
     say(&format!("Stub Claude Code\r\n{mode} session {id}\r\n> "));
     thread::spawn(echo_input);
@@ -153,4 +152,15 @@ fn control(dir: &Path, id: &str) -> Value {
 
 fn read_json(path: &Path) -> Option<Value> {
     serde_json::from_str(&fs::read_to_string(path).ok()?).ok()
+}
+
+#[cfg(unix)]
+fn raw_console_input() {
+    unsafe {
+        let mut mode = std::mem::zeroed();
+        if libc::tcgetattr(libc::STDIN_FILENO, &mut mode) == 0 {
+            libc::cfmakeraw(&mut mode);
+            libc::tcsetattr(libc::STDIN_FILENO, libc::TCSANOW, &mode);
+        }
+    }
 }

@@ -53,7 +53,7 @@ fn from(kind: ErrorKind, error: &impl ToString) -> AppError {
 impl From<StateError> for AppError {
     fn from(error: StateError) -> Self {
         let kind = match &error {
-            StateError::NoLocalAppData | StateError::Json(_) => ErrorKind::StateUnreadable,
+            StateError::InvalidStateDirectory | StateError::NoLocalAppData | StateError::Json(_) => ErrorKind::StateUnreadable,
             StateError::NotADirectory => ErrorKind::NotADirectory,
             StateError::UnsupportedPath => ErrorKind::InvalidArgument,
             StateError::DuplicateWorkspace { .. } => ErrorKind::DuplicateWorkspace,
@@ -119,7 +119,9 @@ impl From<TerminalError> for AppError {
             TerminalError::Exited(_) => ErrorKind::TerminalExited,
             TerminalError::MissingDirectory(_) => ErrorKind::NotADirectory,
             TerminalError::UnsafeBatchArgument(_) => ErrorKind::InvalidArgument,
-            TerminalError::Pty(_) | TerminalError::Job(_) | TerminalError::Io(_) => ErrorKind::Io,
+            TerminalError::Pty(_) | TerminalError::Io(_) => ErrorKind::Io,
+            #[cfg(windows)]
+            TerminalError::Job(_) => ErrorKind::Io,
         };
         from(kind, &error)
     }

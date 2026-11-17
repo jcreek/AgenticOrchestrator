@@ -3,6 +3,7 @@
 ## Set up
 
 1. Install [rustup](https://rustup.rs) (Rust stable), Node 24, pnpm and the Visual Studio Build Tools with the C++ workload.
+   On macOS, install Xcode Command Line Tools (`xcode-select --install`) instead of the Visual Studio tools. Rust stable, Node 24 and pnpm are still required. The Unix core can be built and tested; native macOS UI and packaging are later roadmap milestones. Linux also needs its distribution’s Tauri 2 WebKitGTK development prerequisites.
 2. Install front-end packages: `pnpm -C app install`.
 3. Run with live reload: `pnpm -C app tauri dev`. The first build takes a few minutes.
 
@@ -43,6 +44,8 @@ After adding or changing a command or a type it returns, regenerate the TypeScri
 $env:UPDATE_BINDINGS = '1'; cargo test -p app committed_bindings
 ```
 
+On macOS/Linux, use `UPDATE_BINDINGS=1 cargo test -p app committed_bindings`.
+
 The same test fails in normal runs if `app/src/bindings.ts` is out of date.
 
 ## Front end layout
@@ -62,11 +65,21 @@ Colours, sizes and fonts come from the CSS variables in `app/src/theme.css`, tak
 
 ## Trying things without touching your own data
 
-The app stores its state under `%LOCALAPPDATA%`. To run a throwaway copy, start it with `LOCALAPPDATA` pointing at an empty folder:
+Use `AGENTIC_ORCHESTRATOR_STATE_DIR` to select an absolute directory containing `state.json`, without changing the user’s normal state. Relative or empty overrides are rejected. In PowerShell:
 
 ```
-$env:LOCALAPPDATA = "$env:TEMP\ao-scratch"; pnpm -C app tauri dev
+$env:AGENTIC_ORCHESTRATOR_STATE_DIR = "$env:TEMP\ao-scratch"; pnpm -C app tauri dev
 ```
+
+On macOS/Linux:
+
+```sh
+AGENTIC_ORCHESTRATOR_STATE_DIR="$(mktemp -d)" pnpm -C app tauri dev
+```
+
+Default state directories are `%LOCALAPPDATA%\AgenticOrchestrator` on Windows, `~/Library/Application Support/AgenticOrchestrator` on macOS, and `$XDG_DATA_HOME/AgenticOrchestrator` (or `~/.local/share/AgenticOrchestrator`) on Linux. Existing state formats and Windows locations are unchanged.
+
+Unix captures the configured login shell’s environment once at startup, with a three-second shell deadline, bounded output collection and fallback to the inherited environment. Every tool receives the existing filtered environment. The default shell is an absolute executable `$SHELL`, falling back to `/bin/zsh` on macOS or `/bin/bash` on Linux.
 
 This redirects `state.json` only. WebView2 keeps its own profile, which holds the saved pane layouts, in the real `%LOCALAPPDATA%\dev.agenticorchestrator.app`.
 

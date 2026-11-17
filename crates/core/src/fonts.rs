@@ -39,10 +39,17 @@ mod platform {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+use macos as platform;
+
+#[cfg(all(unix, not(target_os = "macos")))]
 mod platform {
     pub(super) fn font_names() -> Vec<String> {
-        Vec::new()
+        let Ok(output) = std::process::Command::new("fc-list")
+            .args(["--format", "%{family}\n"]).env_clear().envs(crate::environment::environment()).output() else { return Vec::new(); };
+        if !output.status.success() { return Vec::new(); }
+        String::from_utf8_lossy(&output.stdout).lines()
+            .flat_map(|line| line.split(',')).map(|name| name.trim().to_owned()).collect()
     }
 }
 
@@ -109,5 +116,41 @@ mod tests {
     #[test]
     fn reads_font_names_from_the_registry() {
         assert!(installed_font_names().iter().any(|name| name.starts_with("Arial")));
+    }
+}
+
+#[cfg(target_os = "macos")]
+mod macos {
+    use std::ffi::{CStr, c_char, c_void};
+    type Ref = *const c_void;
+    #[link(name = "CoreText", kind = "framework")]
+    unsafe extern "C" { fn CTFontManagerCopyAvailableFontFamilyNames() -> Ref; }
+    #[link(name = "CoreFoundation", kind = "framework")]
+    unsafe extern "C" {
+        fn CFArrayGetCount(array: Ref) -> isize;
+        fn CFArrayGetValueAtIndex(array: Ref, index: isize) -> Ref;
+        fn CFStringGetLength(string: Ref) -> isize;
+        fn CFStringGetMaximumSizeForEncoding(length: isize, encoding: u32) -> isize;
+        fn CFStringGetCString(string: Ref, buffer: *mut c_char, size: isize, encoding: u32) -> bool;
+        fn CFRelease(value: Ref);
+    }
+    pub(super) fn font_names() -> Vec<String> {
+        // Copy returns an owned array; its string elements remain valid until CFRelease.
+        unsafe {
+            let array = CTFontManagerCopyAvailableFontFamilyNames();
+            if array.is_null() { return Vec::new(); }
+            let mut names = Vec::new();
+            for index in 0..CFArrayGetCount(array) {
+                let name = CFArrayGetValueAtIndex(array, index);
+                let capacity = CFStringGetMaximumSizeForEncoding(CFStringGetLength(name), 0x08000100) + 1;
+                if capacity <= 0 { continue; }
+                let mut buffer = vec![0u8; capacity as usize];
+                if CFStringGetCString(name, buffer.as_mut_ptr().cast(), capacity, 0x08000100) {
+                    names.push(CStr::from_ptr(buffer.as_ptr().cast()).to_string_lossy().into_owned());
+                }
+            }
+            CFRelease(array);
+            names
+        }
     }
 }
