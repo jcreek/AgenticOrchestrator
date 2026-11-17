@@ -1,0 +1,109 @@
+name: Desktop release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      release: ${{ steps.version.outputs.release }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test release automation
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+      - name: Check app version and existing release
+        id: version
+        run: python3 .github/scripts/release.py check
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build:
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x64
+            runner: windows-2025
+            command: pnpm -C app tauri build -- --locked
+            artifact: target/release/bundle/nsis/*_x64-setup.exe
+          - platform: macos-aarch64
+            runner: macos-15
+            command: pnpm -C app package:macos
+            artifact: target/aarch64-apple-darwin/release/bundle/dmg/*_aarch64.dmg
+          - platform: macos-x64
+            runner: macos-15-intel
+            command: pnpm -C app package:macos
+            artifact: target/x86_64-apple-darwin/release/bundle/dmg/*_x64.dmg
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - name: Set up Rust stable
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform }}
+      - name: Install frontend dependencies
+        run: pnpm -C app install --frozen-lockfile
+      - name: Validate Cargo lockfile
+        run: cargo metadata --locked --format-version 1 > cargo-metadata.json
+      - name: Rust tests
+        run: cargo test --workspace --locked
+      - name: Frontend tests
+        run: pnpm -C app test
+      - name: Build installer
+        run: ${{ matrix.command }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.platform }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: installers
+      - name: Publish complete release
+        run: python3 .github/scripts/release.py publish "$RELEASE_VERSION" installers
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}

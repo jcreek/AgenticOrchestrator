@@ -3,3 +3,6 @@ node_modules/
 dist/
 *.log
 .claude/worktrees/
+
+# Python release automation
+__pycache__/

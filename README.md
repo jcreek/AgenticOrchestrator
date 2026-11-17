@@ -18,7 +18,7 @@ The first run builds the app, which takes about five minutes. After that it star
 
 Use this to put the app on a machine without the build tools.
 
-**The installer is not in this repo and there is nowhere to download it.** Someone with the build tools has to build it and pass the file on:
+Download installers from [GitHub Releases](https://github.com/jcreek/AgenticOrchestrator/releases). Releases are published automatically when a version bump reaches `main`: Windows x64, macOS Apple Silicon (`aarch64`) and macOS Intel (`x64`). If no release is available yet, use the local build instructions below.
 
 ### Windows
 
@@ -38,7 +38,7 @@ It installs for the current user and needs no admin rights. It is not code-signe
 
 The app has no Developer ID signature or Apple notarisation. Only choose Open Anyway for a copy you trust; see [Apple’s instructions](https://support.apple.com/en-gb/102445). No paid Apple Developer account is required for this installation workflow. Managed Macs may restrict this override. Do not disable Gatekeeper or remove quarantine attributes.
 
-To upgrade, quit the app (which stops its terminals), then replace the app in Applications with the new copy. Sessions and settings are stored outside the application bundle. There is no automatic updater or hosted download yet.
+To upgrade, quit the app (which stops its terminals), then replace the app in Applications with the new copy. Sessions and settings are stored outside the application bundle. There is no automatic updater; download new versions from GitHub Releases.
 
 ## Requirements
 

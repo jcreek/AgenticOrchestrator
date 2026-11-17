@@ -124,6 +124,23 @@ For a release executable without installers, run `pnpm -C app tauri build --no-b
 
 The app version comes from `app/src-tauri/Cargo.toml`. Keep `app/package.json` in step with it. The Settings dialog shows the installed version.
 
+## Automated releases
+
+The **Desktop release** workflow uses GitHub-hosted Windows x64, macOS Apple Silicon and macOS Intel runners. No self-hosted runner, signing credentials or personal access token is needed; publication uses the built-in `GITHUB_TOKEN`.
+
+1. Increase the stable `major.minor.patch` version in `app/src-tauri/Cargo.toml` and `app/package.json` together.
+2. Run `cargo check` to refresh `Cargo.lock` and commit all three files. Keep `app/pnpm-lock.yaml` current if dependencies also change.
+3. Merge to `main`. The workflow compares the version against the commit before the entire push, runs frontend and Rust tests on each platform, and builds all three installers.
+4. Once every build succeeds, the workflow publishes `v<version>` at the built commit with generated release notes and all installers at [GitHub Releases](https://github.com/jcreek/AgenticOrchestrator/releases).
+
+Ordinary pushes do not build installers. Mismatched versions, a stale app lockfile entry, invalid versions and version decreases fail the version check. Prerelease versions are not supported by this workflow. Existing tags at another commit are rejected; published releases are never overwritten.
+
+For an initial release without a bump, open **Actions → Desktop release → Run workflow** on `main`. This also permits retrying the current unpublished version. Prefer **Re-run failed jobs** on the original run after a failure, so the release still targets the original commit. An interrupted publication leaves a draft; retrying replaces its installer assets before publishing it. A draft without a materialized tag must target the exact commit being built. Build artifacts remain downloadable from the run for 14 days, including when a different platform fails.
+
+The workflow serializes releases; GitHub concurrency retains at most one pending run, so avoid pushing several version bumps while a release is running. Installer signing and macOS notarisation remain excluded. The app does not update itself.
+
+Test the release logic locally with `python3 -m unittest discover -s .github/scripts -p 'test_*.py'` (Python 3.11+).
+
 ## Upgrading an installed copy
 
 ### Windows

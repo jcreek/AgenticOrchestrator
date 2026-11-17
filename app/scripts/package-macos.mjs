@@ -11,7 +11,7 @@ const run = (program, args, options = {}) => execFileSync(program, args, { cwd: 
 // Host builds only. Explicitly select the host to avoid Cargo config target overrides.
 const host = run("rustc", ["-vV"], { encoding: "utf8", stdio: "pipe" }).match(/^host: (.+)$/m)?.[1];
 if (!host?.endsWith("-apple-darwin")) throw new Error("Expected a native macOS Rust toolchain");
-run("pnpm", ["tauri", "build", "--bundles", "app", "--target", host]);
+run("pnpm", ["tauri", "build", "--bundles", "app", "--target", host, "--", "--locked"]);
 const metadata = JSON.parse(run("cargo", ["metadata", "--no-deps", "--format-version", "1"], { encoding: "utf8", stdio: "pipe" }));
 const bundleDir = join(metadata.target_directory, host, "release", "bundle");
 const { version } = JSON.parse(readFileSync(join(appDir, "package.json"), "utf8"));
