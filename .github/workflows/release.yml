@@ -44,12 +44,14 @@ jobs:
             command: pnpm -C app tauri build -- --locked
             artifact: target/release/bundle/nsis/*_x64-setup.exe
           - platform: macos-aarch64
-            runner: macos-15
-            command: pnpm -C app package:macos
+            runner: [self-hosted, macOS, ARM64, mac-mini]
+            command: pnpm -C app package:macos --target aarch64-apple-darwin
+            rust-target: aarch64-apple-darwin
             artifact: target/aarch64-apple-darwin/release/bundle/dmg/*_aarch64.dmg
           - platform: macos-x64
-            runner: macos-15-intel
-            command: pnpm -C app package:macos
+            runner: [self-hosted, macOS, ARM64, mac-mini]
+            rust-target: x86_64-apple-darwin
+            command: pnpm -C app package:macos --target x86_64-apple-darwin
             artifact: target/x86_64-apple-darwin/release/bundle/dmg/*_x64.dmg
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -67,6 +69,11 @@ jobs:
           cache-dependency-path: app/pnpm-lock.yaml
       - name: Set up Rust stable
         run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Install macOS Rust target
+        if: runner.os == 'macOS'
+        run: rustup target add "$RUST_TARGET"
+        env:
+          RUST_TARGET: ${{ matrix.rust-target }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.platform }}

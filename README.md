@@ -31,7 +31,7 @@ It installs for the current user and needs no admin rights. It is not code-signe
 ### macOS
 
 1. On a Mac with the build tools, run `pnpm -C app package:macos`.
-2. Share the `.dmg` in `target/<host-triple>/release/bundle/dmg/`. The `.app` is also available in `target/<host-triple>/release/bundle/macos/`. Builds match the build Mac: Apple Silicon (`aarch64-apple-darwin`) or Intel (`x86_64-apple-darwin`). Use a build matching the recipient’s Mac; the DMG filename ends in `aarch64` or `x64` respectively.
+2. Share the `.dmg` in `target/<host-triple>/release/bundle/dmg/`. The `.app` is also available in `target/<host-triple>/release/bundle/macos/`. Builds default to the build Mac: Apple Silicon (`aarch64-apple-darwin`) or Intel (`x86_64-apple-darwin`). To cross-compile for Intel on Apple Silicon, install `rustup target add x86_64-apple-darwin`, then run `pnpm -C app package:macos --target x86_64-apple-darwin`. Use a build matching the recipient’s Mac; the DMG filename ends in `aarch64` or `x64` respectively.
 3. Open the DMG and read **Read Me First.txt**. Drag **Agentic Orchestrator** into **Applications**, then eject the image.
 4. Open **Agentic Orchestrator** from Applications.
 5. If macOS blocks it, open **System Settings → Privacy & Security**, scroll to the message about Agentic Orchestrator and choose **Open Anyway**. Confirm the prompt (and authenticate if requested), then click **Open**. If Open Anyway is missing, try opening the installed app again first.
