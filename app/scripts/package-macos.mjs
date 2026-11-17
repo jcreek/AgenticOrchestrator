@@ -22,6 +22,8 @@ const output = join(outputDir, `Agentic Orchestrator_${version}_${arch}.dmg`);
 const staging = mkdtempSync(join(tmpdir(), "ao-dmg-"));
 try {
   run("ditto", [join(bundleDir, "macos", "Agentic Orchestrator.app"), join(staging, "Agentic Orchestrator.app")]);
+  // Verify the final staged bundle, including its resources, before distributing it.
+  run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", join(staging, "Agentic Orchestrator.app")]);
   symlinkSync("/Applications", join(staging, "Applications"));
   copyFileSync(join(appDir, "packaging", "macos", "Read Me First.txt"), join(staging, "Read Me First.txt"));
   run("hdiutil", ["create", "-ov", "-format", "UDZO", "-fs", "HFS+", "-volname", "Agentic Orchestrator", "-srcfolder", staging, output]);

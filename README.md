@@ -36,7 +36,7 @@ It installs for the current user and needs no admin rights. It is not code-signe
 4. Open **Agentic Orchestrator** from Applications.
 5. If macOS blocks it, open **System Settings → Privacy & Security**, scroll to the message about Agentic Orchestrator and choose **Open Anyway**. Confirm the prompt (and authenticate if requested), then click **Open**. If Open Anyway is missing, try opening the installed app again first.
 
-The app has no Developer ID signature or Apple notarisation. Only choose Open Anyway for a copy you trust; see [Apple’s instructions](https://support.apple.com/en-gb/102445). No paid Apple Developer account is required for this installation workflow. Managed Macs may restrict this override. Do not disable Gatekeeper or remove quarantine attributes.
+The app uses an ad-hoc bundle signature, with no Developer ID signature or Apple notarisation. Only choose Open Anyway for a copy you trust; see [Apple’s instructions](https://support.apple.com/en-gb/102445). No paid Apple Developer account is required for this installation workflow. Managed Macs may restrict this override. Do not disable Gatekeeper or remove quarantine attributes.
 
 To upgrade, quit the app (which stops its terminals), then replace the app in Applications with the new copy. Sessions and settings are stored outside the application bundle. There is no automatic updater; download new versions from GitHub Releases.
 

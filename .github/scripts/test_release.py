@@ -76,10 +76,22 @@ class PublishTests(unittest.TestCase):
         self.addCleanup(self.env.stop)
 
     def publish(self, existing):
-        complete = {"assets": [{"name": n} for n in release.expected_assets("1.2.3")]}
+        complete = {"assets": [{"name": n} for n in [
+            "Agentic.Orchestrator_1.2.3_x64-setup.exe",
+            "Agentic.Orchestrator_1.2.3_aarch64.dmg",
+            "Agentic.Orchestrator_1.2.3_x64.dmg",
+        ]]}
         with patch.object(release, "run") as run, patch.object(release, "verify_tag", return_value=False), patch.object(release, "existing_release", side_effect=[existing, complete]):
             release.publish("1.2.3", self.directory.name)
             return [call.args for call in run.call_args_list]
+
+    def test_github_normalizes_spaces_in_asset_names(self):
+        self.assertEqual(release.expected_uploaded_assets("0.3.0"), {
+            "Agentic.Orchestrator_0.3.0_x64-setup.exe",
+            "Agentic.Orchestrator_0.3.0_aarch64.dmg",
+            "Agentic.Orchestrator_0.3.0_x64.dmg",
+        })
+        self.assertIn("Agentic Orchestrator_0.3.0_aarch64.dmg", release.expected_assets("0.3.0"))
 
     def test_publish_only_after_upload(self):
         calls = self.publish(None)

@@ -57,6 +57,12 @@ def expected_assets(version):
     }
 
 
+def expected_uploaded_assets(version):
+    # GitHub replaces spaces with dots in release asset names. Local bundle
+    # filenames retain spaces, so validate each side using its own names.
+    return {name.replace(" ", ".") for name in expected_assets(version)}
+
+
 def gate():
     version = validate_versions(Path("app/src-tauri/Cargo.toml").read_text(), Path("app/package.json").read_text(), Path("Cargo.lock").read_text())
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
@@ -102,8 +108,10 @@ def publish(version, directory):
         run("gh", "release", "create", tag, "--repo", repo, "--target", sha, "--title", tag, "--draft", "--generate-notes")
     run("gh", "release", "upload", tag, *(str(p) for p in assets), "--repo", repo, "--clobber")
     release = existing_release(repo, tag)
-    if {a["name"] for a in release["assets"]} != expected_assets(version):
-        raise ValueError("Draft release assets do not match the three expected installers")
+    actual = {a["name"] for a in release["assets"]}
+    expected = expected_uploaded_assets(version)
+    if actual != expected:
+        raise ValueError(f"Draft release assets mismatch: missing={sorted(expected - actual)}, unexpected={sorted(actual - expected)}")
     run("gh", "release", "edit", tag, "--repo", repo, "--draft=false", "--latest")
 
 

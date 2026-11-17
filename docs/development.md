@@ -111,7 +111,7 @@ pnpm -C app tauri icon src-tauri/icons/icon.svg -o $env:TEMP\ao-icons
 
 On macOS, run `pnpm -C app package:macos` for the distributable DMG. It builds the host architecture’s app using Tauri, then packages the app, an Applications shortcut and a visible **Read Me First.txt** with `hdiutil`. Outputs are `target/<host-triple>/release/bundle/macos/Agentic Orchestrator.app` and a `.dmg` under `target/<host-triple>/release/bundle/dmg/`. Apple Silicon uses `aarch64-apple-darwin` / the filename suffix `aarch64`; Intel uses `x86_64-apple-darwin` / `x64`. `CARGO_TARGET_DIR`, if set, replaces the `target` root. Universal binaries are outside this workflow. Plain `pnpm -C app tauri build` produces only the macOS app bundle; Windows NSIS packaging is unchanged.
 
-Neither platform uses a distribution signing certificate. macOS Developer ID signing and notarisation are deliberately excluded. Installation and first launch:
+The macOS bundle uses an ad-hoc signature (`bundle.macOS.signingIdentity: "-"`) to seal the executable and resources. Packaging verifies the staged bundle with `codesign --verify --deep --strict` before creating the DMG, and fails if verification fails. Neither platform uses a distribution signing certificate. macOS Developer ID signing and notarisation are deliberately excluded. Installation and first launch:
 
 1. Open the DMG and read **Read Me First.txt**.
 2. Drag the app onto Applications, then eject the image.
@@ -137,7 +137,7 @@ Ordinary pushes do not build installers. Mismatched versions, a stale app lockfi
 
 For an initial release without a bump, open **Actions → Desktop release → Run workflow** on `main`. This also permits retrying the current unpublished version. Prefer **Re-run failed jobs** on the original run after a failure, so the release still targets the original commit. An interrupted publication leaves a draft; retrying replaces its installer assets before publishing it. A draft without a materialized tag must target the exact commit being built. Build artifacts remain downloadable from the run for 14 days, including when a different platform fails.
 
-The workflow serializes releases; GitHub concurrency retains at most one pending run, so avoid pushing several version bumps while a release is running. Installer signing and macOS notarisation remain excluded. The app does not update itself.
+The workflow serializes releases; GitHub concurrency retains at most one pending run, so avoid pushing several version bumps while a release is running. Windows distribution signing, macOS Developer ID signing and notarisation remain excluded; macOS uses an ad-hoc bundle signature. The app does not update itself.
 
 Test the release logic locally with `python3 -m unittest discover -s .github/scripts -p 'test_*.py'` (Python 3.11+).
 

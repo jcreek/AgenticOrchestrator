@@ -11,7 +11,8 @@ Claude Code (claude) and Git must be installed and available on PATH.
    Confirm the prompt (and authenticate if requested), then click Open.
    If Open Anyway is missing, try opening the installed app again first.
 
-The app has no Developer ID signature or Apple notarisation. Only choose
+The app has an ad-hoc bundle signature, but no Developer ID signature or Apple
+notarisation. Only choose
 Open Anyway for a copy you trust. Managed Macs may restrict this override.
 No paid Apple Developer account is required to use this installation workflow.
 Do not disable Gatekeeper or remove quarantine attributes.
