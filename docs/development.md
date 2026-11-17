@@ -109,9 +109,16 @@ pnpm -C app tauri icon src-tauri/icons/icon.svg -o $env:TEMP\ao-icons
 
 `pnpm -C app tauri build` writes a per-user Windows installer to `target\release\bundle\nsis`.
 
-On macOS, the same command produces `target/release/bundle/macos/Agentic Orchestrator.app` and a `.dmg` under `target/release/bundle/dmg/`. The platform configuration automatically selects `app` and `dmg`, leaving Windows NSIS packaging unchanged. The default build matches the host architecture (`aarch64` for Apple Silicon, `x86_64` for Intel); label distributed files accordingly. Universal binaries are not part of this workflow.
+On macOS, run `pnpm -C app package:macos` for the distributable DMG. It builds the host architecture’s app using Tauri, then packages the app, an Applications shortcut and a visible **Read Me First.txt** with `hdiutil`. Outputs are `target/<host-triple>/release/bundle/macos/Agentic Orchestrator.app` and a `.dmg` under `target/<host-triple>/release/bundle/dmg/`. Apple Silicon uses `aarch64-apple-darwin` / the filename suffix `aarch64`; Intel uses `x86_64-apple-darwin` / `x64`. `CARGO_TARGET_DIR`, if set, replaces the `target` root. Universal binaries are outside this workflow. Plain `pnpm -C app tauri build` produces only the macOS app bundle; Windows NSIS packaging is unchanged.
 
-Neither platform uses a distribution signing certificate. macOS Developer ID signing and notarisation are deliberately excluded. Recipients install by dragging the app from the mounted DMG into Applications and, if blocked at first launch, choose **System Settings → Privacy & Security → Open Anyway** after attempting to open it. See [Apple’s instructions](https://support.apple.com/en-gb/102445). No global security changes or quarantine-removal commands are needed.
+Neither platform uses a distribution signing certificate. macOS Developer ID signing and notarisation are deliberately excluded. Installation and first launch:
+
+1. Open the DMG and read **Read Me First.txt**.
+2. Drag the app onto Applications, then eject the image.
+3. Open the installed app from Applications.
+4. If blocked, go to **System Settings → Privacy & Security**, scroll to the app’s message and click **Open Anyway**. Confirm (and authenticate if requested), then click **Open**. If the button is missing, attempt to open the installed app again first.
+
+Only use this override for a copy you trust. See [Apple’s instructions](https://support.apple.com/en-gb/102445); managed Macs may restrict the override. Do not disable Gatekeeper or remove quarantine attributes. The standalone installation guide source is `app/packaging/macos/Read Me First.txt`; keep it consistent with README.
 
 For a release executable without installers, run `pnpm -C app tauri build --no-bundle`.
 
@@ -132,7 +139,7 @@ Sessions and settings are kept: `state.json` and the WebView2 profile live under
 
 ### macOS
 
-1. For a versioned release, raise the version in both manifests, then run `pnpm -C app tauri build` on the desired architecture.
+1. For a versioned release, raise the version in both manifests, then run `pnpm -C app package:macos` on the desired architecture.
 2. Quit the installed app, ending its running terminals.
 3. Mount the new DMG and replace **Agentic Orchestrator.app** in Applications. Eject the DMG and launch the installed copy; use Open Anyway if prompted.
 

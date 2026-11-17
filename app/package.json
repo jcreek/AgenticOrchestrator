@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:bdd": "node e2e/prepare.mjs && cucumber-js --config e2e/cucumber.mjs",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "package:macos": "node scripts/package-macos.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

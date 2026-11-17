@@ -30,11 +30,13 @@ It installs for the current user and needs no admin rights. It is not code-signe
 
 ### macOS
 
-1. On a Mac with the build tools, run `pnpm -C app tauri build`.
-2. Share the `.dmg` in `target/release/bundle/dmg/`. The `.app` is also available in `target/release/bundle/macos/`. Builds target the build Mac’s architecture: Apple Silicon (`aarch64`) or Intel (`x86_64`); use a build matching the recipient’s Mac.
-3. Open the DMG, drag **Agentic Orchestrator** into **Applications**, eject the image and open the installed app.
+1. On a Mac with the build tools, run `pnpm -C app package:macos`.
+2. Share the `.dmg` in `target/<host-triple>/release/bundle/dmg/`. The `.app` is also available in `target/<host-triple>/release/bundle/macos/`. Builds match the build Mac: Apple Silicon (`aarch64-apple-darwin`) or Intel (`x86_64-apple-darwin`). Use a build matching the recipient’s Mac; the DMG filename ends in `aarch64` or `x64` respectively.
+3. Open the DMG and read **Read Me First.txt**. Drag **Agentic Orchestrator** into **Applications**, then eject the image.
+4. Open **Agentic Orchestrator** from Applications.
+5. If macOS blocks it, open **System Settings → Privacy & Security**, scroll to the message about Agentic Orchestrator and choose **Open Anyway**. Confirm the prompt (and authenticate if requested), then click **Open**. If Open Anyway is missing, try opening the installed app again first.
 
-The app has no Developer ID signature or Apple notarisation. If macOS blocks first launch, attempt to open it, then choose **System Settings → Privacy & Security → Open Anyway** and confirm. Only do this for a copy you trust; see [Apple’s instructions](https://support.apple.com/en-gb/102445). No paid Apple Developer account is required for this installation workflow. Managed Macs may restrict this override.
+The app has no Developer ID signature or Apple notarisation. Only choose Open Anyway for a copy you trust; see [Apple’s instructions](https://support.apple.com/en-gb/102445). No paid Apple Developer account is required for this installation workflow. Managed Macs may restrict this override. Do not disable Gatekeeper or remove quarantine attributes.
 
 To upgrade, quit the app (which stops its terminals), then replace the app in Applications with the new copy. Sessions and settings are stored outside the application bundle. There is no automatic updater or hosted download yet.
 

@@ -1,12 +1,20 @@
 # Cross-platform roadmap: remaining work
 
-Only outstanding work is listed here. Validation records and the macOS manual
-smoke checklist live in [Testing](testing.md).
+**Phase 4 is complete (2026-11-17).** macOS packaging, the repository launcher
+and installation/upgrade documentation are delivered. The DMG includes a visible
+Read Me First guide with Open Anyway instructions; its contents and the local
+installed app have been verified on Apple Silicon. Developer ID signing,
+notarisation and macOS UI automation are deliberately excluded.
+
+The remaining work below tracks broader platform validation and phase 5; it does
+not reopen phase 4. Validation records and the macOS manual smoke checklist live
+in [Testing](testing.md).
 
 ## Decisions
 
 - **macOS UI validation is manual.** The existing `@ui` harness is Windows-only
-  because it drives WebView2 over CDP. Linux UI automation will use tauri-driver.
+  because it drives WebView2 over CDP. No macOS automation is planned. Linux
+  UI automation belongs to phase 5 and will use tauri-driver.
 - **Developer ID signing and notarisation are excluded.** Users can manually
   choose Open Anyway for a trusted downloaded copy.
 - **CI remains deferred.** Run checks by hand on each native platform.

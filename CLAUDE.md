@@ -37,8 +37,8 @@ Run the app: `pnpm -C app tauri dev`. Install front-end packages: `pnpm -C app i
 ## Environment notes
 
 - The package manager is pnpm, not npm.
-- On macOS/Linux, run the Rust workspace checks and frontend build/unit tests; `test:bdd` remains Windows-only. macOS uses the manual smoke checklist in `docs/testing.md`; packaging uses `app` and `dmg` targets.
-- macOS prerequisites: Rust stable, Node 24, pnpm and Xcode Command Line Tools. Launch with `./"Start Agentic Orchestrator.command"`; build bundles with `pnpm -C app tauri build`. Developer ID signing and notarisation are deliberately excluded; recipients can use Open Anyway.
+- On macOS/Linux, run the Rust workspace checks and frontend build/unit tests; `test:bdd` remains Windows-only. macOS uses the manual smoke checklist in `docs/testing.md`; UI automation is not planned on macOS. Linux UI automation belongs to phase 5.
+- macOS prerequisites: Rust stable, Node 24, pnpm and Xcode Command Line Tools. Launch with `./"Start Agentic Orchestrator.command"`; build the distributable DMG with `pnpm -C app package:macos` (plain `tauri build` creates the app only). Developer ID signing and notarisation are deliberately excluded; recipients can use Open Anyway.
 - macOS state defaults to `~/Library/Application Support/AgenticOrchestrator`; app identifier: `dev.agenticorchestrator.desktop`. Use POSIX environment assignments, e.g. `UPDATE_BINDINGS=1 cargo test -p app committed_bindings`.
 - Use `AGENTIC_ORCHESTRATOR_STATE_DIR` (absolute directory) for isolated app state.
 - Invoke `cargo` and `pnpm` from PATH. A local pre-tool hook rejects any shell command that names a `bin`, `obj`, `dist`, `node_modules`, `coverage` or `.git` path.

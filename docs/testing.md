@@ -84,6 +84,9 @@ The report names the step and the reason, e.g. `Timed out after 30s waiting for 
 - The run writes the test build's saved window state to `%APPDATA%\dev.agenticorchestrator.bdd\.window-state.json` before each start; that is how the window is parked and kept unfocused. The real app's saved state is under a different identifier and is not touched.
 - Debug builds regenerate `app/src/bindings.ts` at start-up; the content is unchanged unless commands changed.
 
+macOS UI testing remains manual; no automated macOS harness is planned. Windows
+has the automated `@ui` suite; Linux automation remains phase 5 work.
+
 ## macOS manual smoke checklist (phase 3)
 
 Run against WKWebView using `pnpm -C app tauri dev`. Set
@@ -204,9 +207,11 @@ unit test does not count as a smoke pass.
 
 ## macOS packaging validation (phase 4)
 
-Build on the target architecture with `pnpm -C app tauri build`. Mount the DMG
-from `target/release/bundle/dmg/`, copy the application into a temporary
-installation directory (or Applications), and eject the image before testing.
+Build on the target architecture with `pnpm -C app package:macos`. Mount the DMG
+from `target/<host-triple>/release/bundle/dmg/`, verify the app, Applications
+shortcut and readable **Read Me First.txt** are present, then copy the application
+into a temporary installation directory (or Applications), and eject the image
+before testing.
 Launch the copied app with `AGENTIC_ORCHESTRATOR_STATE_DIR` set to a fresh
 absolute directory. Verify the window loads, tool discovery finds Claude and
 Git, a disposable repository session starts, and native Quit stops the session
@@ -249,3 +254,26 @@ Packaging checks do not replace the phase 3 checklist or native Windows checks.
   native checklist and all five native Windows checks. The earlier phase 3
   provider attachment failure applied to the unbundled development executable;
   it did not prevent the installed-bundle checks above.
+
+### Installation guidance verification — 2026-11-17 (Apple Silicon)
+
+- Passed: `pnpm -C app package:macos` built the host app and DMG under
+  `target/aarch64-apple-darwin/release/bundle/`. The existing temporary-toolchain
+  LLVM stripping warning was non-fatal. The packaging command replaces Tauri’s
+  stock DMG creation so a loose installation guide can be included.
+- Passed: mounted the DMG read-only; verified the application bundle,
+  `/Applications` shortcut and nonhidden `Read Me First.txt`. The guide bytes
+  matched the repository source file. Finder displayed all three items and
+  Quick Look displayed the full numbered Open Anyway instructions, architecture
+  requirements, upgrade guidance and Apple support link. The image was ejected
+  after verification.
+- Passed: packaging script syntax and disposable mock-tool checks covering
+  staging paths containing spaces, app/shortcut/guide inclusion, cleanup after
+  success or disk-image failure, and no packaging after an app-build failure.
+  README, development docs and the DMG guide agree on the first-launch steps.
+- Phase 4 installation guidance is included and verified. The earlier local
+  installed-app results remain recorded above. Browser-downloaded Gatekeeper
+  behaviour, Intel builds, upgrades/persistence, native Windows regression
+  checks and the outstanding macOS manual smoke checklist remain pending.
+- macOS UI automation is deliberately excluded. Windows has the automated
+  `@ui` harness; Linux automation remains phase 5 work.

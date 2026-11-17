@@ -1,0 +1,23 @@
+Agentic Orchestrator — install and first launch
+
+Use a build matching your Mac: aarch64 is Apple Silicon; x64/x86_64 is Intel.
+The architecture is included in the DMG filename.
+Claude Code (claude) and Git must be installed and available on PATH.
+
+1. Drag Agentic Orchestrator.app onto the Applications shortcut in this window.
+2. Eject the disk image, then open Agentic Orchestrator from Applications.
+3. If macOS blocks opening the app, open System Settings > Privacy & Security.
+   Scroll to the message about Agentic Orchestrator and click Open Anyway.
+   Confirm the prompt (and authenticate if requested), then click Open.
+   If Open Anyway is missing, try opening the installed app again first.
+
+The app has no Developer ID signature or Apple notarisation. Only choose
+Open Anyway for a copy you trust. Managed Macs may restrict this override.
+No paid Apple Developer account is required to use this installation workflow.
+Do not disable Gatekeeper or remove quarantine attributes.
+
+Apple's instructions:
+https://support.apple.com/en-gb/102445
+
+Upgrading: quit the app first (this stops its terminals), then replace the app
+in Applications. Your saved sessions and settings are outside the app bundle.
