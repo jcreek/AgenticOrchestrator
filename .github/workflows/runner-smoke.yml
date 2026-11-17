@@ -1,0 +1,24 @@
+name: Mac mini runner check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: [self-hosted, macOS, ARM64, mac-mini]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify runner and checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_OS" = macOS
+          test "$RUNNER_ARCH" = ARM64
+          test "$RUNNER_NAME" = mac-mini-agentic-orchestrator
+          git rev-parse --is-inside-work-tree
+          printf 'runner=%s workspace=%s start=%s\n' "$RUNNER_NAME" "$GITHUB_WORKSPACE" "$(date -u +%FT%TZ)"
+          sleep 30
+          printf 'end=%s\n' "$(date -u +%FT%TZ)"
