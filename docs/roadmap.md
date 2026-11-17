@@ -1,21 +1,30 @@
 # Cross-platform roadmap: macOS first, then Linux
 
-The supported desktop app is Windows-only. Unix core support is implemented; the remaining desktop work targets macOS and then Linux. It comes from an audit of the code in November 2026.
+Windows is the established desktop platform. Unix core support, macOS app behaviour and macOS packaging configuration are implemented; native validation remains tracked below before claiming full macOS support. It comes from an audit of the code in November 2026.
 
 Items marked *(inferred)* come from knowledge of the platforms, not from running anything. They must be confirmed on a real Mac.
 
-## Where we start
+## Current status — 2026-11-17
 
-- **Phase 1 guards are implemented.** Windows APIs and dependencies are gated; Unix core implementations are now present. Native macOS app behaviour and packaging remain separate milestones.
-- **The terminal layer is mostly portable.** It uses `portable-pty`, not ConPTY directly. The Windows-only parts are process-tree killing (Job objects), font discovery (registry), the state folder (`%LOCALAPPDATA%`) and a set of path rules.
-- **The `@ui` tests cannot run on macOS.** The harness drives WebView2 over the Chrome DevTools Protocol. WKWebView offers neither that nor a WebDriver route that Tauri supports.
-- **There is no CI and no signing.**
+- **Phases 1 and 2 are implemented.** Windows-only APIs are gated and Unix core behaviour is present. Native macOS workspace tests (118 core unit tests, 8 app unit tests and 47 core scenarios / 215 steps), strict clippy, frontend build and 141 frontend unit tests pass.
+- **Phase 3 is implemented, with the full native smoke checklist pending.** The bundled app can now be inspected through computer use. Its overview, Cmd shortcut labels, disposable repository session startup and native Quit have been observed; this does not establish all window, clipboard, WebKit or quit-confirmation behaviour.
+- **Phase 4 is complete for local Apple Silicon installation.** The app and DMG build; a copy installed from the mounted DMG runs after the image is ejected. The repository launcher and macOS installation/upgrade documentation are in place.
+- **Native Windows regression verification remains pending.** Cross-compilation and Mac checks do not replace the five Windows checks.
+- **Phase 5 has not started.** Linux core code cross-compiles, but native Linux execution, desktop packaging and UI automation remain outstanding.
+- **No CI, Developer ID signing or notarisation.** Users can manually choose Open Anyway for a trusted downloaded copy.
+
+### Remaining work
+
+1. Complete the macOS manual smoke checklist in [Testing](testing.md), including running-session/unsaved-edit quit confirmation, clipboard, minimisation, Monaco workers and notifications. The bundled app is accessible to computer use; the earlier attachment failure affected the unbundled development executable.
+2. Validate a browser-downloaded DMG and Open Anyway on another matching-architecture Mac, plus upgrade/persistence behaviour. Intel builds have not been validated.
+3. Run all five checks on native Windows and record the results.
+4. Implement and validate Phase 5 on native Linux.
 
 ## Decisions
 
 1. **`@ui` scenarios stay Windows-only for the macOS port.** macOS is covered by `cargo test --workspace` (which includes the `@core` BDD scenarios), the front-end unit tests and a written manual smoke checklist. Linux can get `@ui` later through tauri-driver.
-2. **Signing and notarisation wait until the app is handed to another Mac user.** A locally built app runs on the Mac that built it. Distribution needs a paid Apple Developer account.
-3. **No CI is added as part of the port.** Checks are run by hand on a Mac, as they are on Windows. A CI matrix is optional in Phase 4.
+2. **Developer ID signing and notarisation are deliberately excluded.** Users can install a shared DMG and manually choose Open Anyway if Gatekeeper blocks first launch. This workflow does not require a paid Apple Developer account.
+3. **No CI is added as part of the port.** Checks are run by hand on a Mac, as they are on Windows. A CI matrix remains deferred.
 4. **Windows behaviour does not change.** Every phase ends with all five checks passing on Windows.
 
 Linux would be the cheaper platform to test (free CI runners, and a WebDriver route for `@ui`). macOS first means the first port relies on manual UI testing. Phase 2 is shared Unix work, so Linux gets most of its core port either way.
@@ -62,10 +71,11 @@ while terminal Ctrl+W remains word deletion. The native menu does not reserve
 Cmd+W for closing the window. macOS alone uses
 `dev.agenticorchestrator.desktop`, preserving the Windows identifier and window
 positions. The Rust workspace/core BDD checks, strict clippy and frontend build
-and unit tests pass on macOS. The dev executable launches, but native interaction
-checks remain pending because the computer-use provider cannot attach to it.
-See the manual checklist and dated results in `docs/testing.md`. Packaging remains
-phase 4; Windows still needs all five native checks.
+and unit tests pass on macOS. The dev executable launches. Phase 4 also verified
+the installed bundle’s overview, disposable session startup and native Quit
+through computer use; the full native smoke checklist remains pending.
+See the manual checklist and dated results in `docs/testing.md`. Phase 4 local
+packaging validation is complete; Windows still needs all five native checks.
 
 1. **Window**: a `tauri.macos.conf.json` with an overlay title bar; hide the HTML window buttons in `TitleBar.tsx` on macOS and leave room for the traffic lights.
 2. **Quit guard** (`app/src-tauri/src/lib.rs`) *(inferred)*: Cmd+Q and Dock > Quit bypass the close confirmation. Handle `ExitRequested` and route it through the existing guard in `App.tsx`.
@@ -77,17 +87,18 @@ phase 4; Windows still needs all five native checks.
 
 **Exit:** `pnpm -C app tauri dev` runs on a Mac, and a manual smoke checklist passes. The checklist is the `@ui` feature files walked by hand, and goes in `docs/testing.md`.
 
-## Phase 4: macOS packaging and docs (small)
+## Phase 4: macOS packaging and docs (implemented; local installation verified)
 
 - `tauri.macos.conf.json`: `app` and `dmg` bundle targets.
-- A shell equivalent of `Start Agentic Orchestrator.cmd`.
+- Executable `Start Agentic Orchestrator.command` mirrors the Windows launcher’s commit-stamped build and launch workflow.
 - README and `docs/development.md`: macOS prerequisites, POSIX command forms, upgrade steps and the macOS paths.
 - The Environment notes in `CLAUDE.md`.
-- Optional: signing and notarisation; a CI matrix running the cargo and unit-test checks on Windows and macOS.
+- Developer ID signing and notarisation deliberately excluded; CI remains deferred.
+- Validation results and remaining installation/smoke checks are recorded in `docs/testing.md`.
 
-**Exit:** a `.dmg` built on the Mac installs and runs on that Mac.
+**Exit met on Apple Silicon (2026-11-17):** the built DMG was mounted, its app copied out and launched after ejecting the image; a disposable repository session reached Claude Code’s trust prompt and native Quit left no test processes. Downloaded-app Gatekeeper behaviour, the phase 3 checklist and native Windows checks remain pending.
 
-## Phase 5: Linux (medium, mostly testing)
+## Phase 5: Linux (not started; medium, mostly testing)
 
 - `tauri.linux.conf.json`: `deb` and `AppImage` targets.
 - Case-sensitive path comparison in `state.rs`, `status.rs` and `app/src/state/paths.ts`, and the "spelled in upper case" scenario in `features/sessions.feature`.

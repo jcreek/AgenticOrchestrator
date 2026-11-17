@@ -13,5 +13,8 @@
       "titleBarStyle": "Overlay",
       "hiddenTitle": true
     }]
+  },
+  "bundle": {
+    "targets": ["app", "dmg"]
   }
 }

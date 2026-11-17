@@ -1,6 +1,6 @@
 # Agentic Orchestrator
 
-A Windows desktop app for running and switching between many Claude Code sessions, one per repo or git worktree. Tauri 2 (Rust backend, WebView2 front end), xterm.js terminals, Monaco editor.
+A Windows and macOS desktop app for running and switching between many Claude Code sessions, one per repo or git worktree. Tauri 2 (Rust backend, WebView2/WKWebView front end), xterm.js terminals, Monaco editor.
 
 ## Layout
 
@@ -37,7 +37,9 @@ Run the app: `pnpm -C app tauri dev`. Install front-end packages: `pnpm -C app i
 ## Environment notes
 
 - The package manager is pnpm, not npm.
-- On macOS/Linux, run the Rust workspace checks and frontend build/unit tests; `test:bdd` remains Windows-only. Native Mac UI and packaging are later milestones.
+- On macOS/Linux, run the Rust workspace checks and frontend build/unit tests; `test:bdd` remains Windows-only. macOS uses the manual smoke checklist in `docs/testing.md`; packaging uses `app` and `dmg` targets.
+- macOS prerequisites: Rust stable, Node 24, pnpm and Xcode Command Line Tools. Launch with `./"Start Agentic Orchestrator.command"`; build bundles with `pnpm -C app tauri build`. Developer ID signing and notarisation are deliberately excluded; recipients can use Open Anyway.
+- macOS state defaults to `~/Library/Application Support/AgenticOrchestrator`; app identifier: `dev.agenticorchestrator.desktop`. Use POSIX environment assignments, e.g. `UPDATE_BINDINGS=1 cargo test -p app committed_bindings`.
 - Use `AGENTIC_ORCHESTRATOR_STATE_DIR` (absolute directory) for isolated app state.
 - Invoke `cargo` and `pnpm` from PATH. A local pre-tool hook rejects any shell command that names a `bin`, `obj`, `dist`, `node_modules`, `coverage` or `.git` path.
 - Status comes from polling `claude agents --json`, matched by the session id the app assigns with `--session-id`.

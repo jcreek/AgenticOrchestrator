@@ -3,11 +3,11 @@
 ## Set up
 
 1. Install [rustup](https://rustup.rs) (Rust stable), Node 24, pnpm and the Visual Studio Build Tools with the C++ workload.
-   On macOS, install Xcode Command Line Tools (`xcode-select --install`) instead of the Visual Studio tools. Rust stable, Node 24 and pnpm are still required. The Unix core can be built and tested; native macOS UI and packaging are later roadmap milestones. Linux also needs its distribution’s Tauri 2 WebKitGTK development prerequisites.
+   On macOS, install Xcode Command Line Tools (`xcode-select --install`) instead of the Visual Studio tools. Rust stable, Node 24 and pnpm are still required. The macOS app can be built as an application bundle and DMG; outstanding native smoke checks are recorded in [Testing](testing.md). Linux also needs its distribution’s Tauri 2 WebKitGTK development prerequisites.
 2. Install front-end packages: `pnpm -C app install`.
 3. Run with live reload: `pnpm -C app tauri dev`. The first build takes a few minutes.
 
-To run the optimised app without live reload, double-click `Start Agentic Orchestrator.cmd` in the repo root.
+To run the optimised app without live reload, double-click `Start Agentic Orchestrator.cmd` on Windows or `Start Agentic Orchestrator.command` on macOS in the repo root. The launchers build on first use and when the Git commit changes; uncommitted source changes require a manual build.
 
 ## Checks
 
@@ -22,11 +22,13 @@ pnpm -C app test
 
 The core tests start real terminals and run real git in temporary folders, so they take about a minute. `cargo test --workspace` also runs the `@core` BDD scenarios in `features/`. One test is ignored by default because it needs Claude Code on PATH: `cargo test -p orchestrator-core -- --ignored`.
 
-For changes a user would see in the window, also run the end-to-end `@ui` scenarios, which build and drive the real app with a stub Claude Code:
+On Windows, for changes a user would see in the window, also run the end-to-end `@ui` scenarios, which build and drive the real app with a stub Claude Code:
 
 ```
 pnpm -C app test:bdd
 ```
+
+On macOS, walk the manual smoke checklist instead; the WebView2-based `@ui` harness is Windows-only.
 
 [Testing](testing.md) explains the layers, how to write a scenario and how the stub works.
 
@@ -92,7 +94,7 @@ The icons are in `app/src-tauri/icons`, listed under `bundle.icon` in `tauri.con
 | File | Used for |
 |---|---|
 | `icon.ico`, `32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png` | Windows: the exe, taskbar and installer. Drawn by hand for each size; do not overwrite them with generated ones. |
-| `icon.icns` | macOS. Not used by the Windows build; kept because the app is meant to become cross-platform. |
+| `icon.icns` | macOS application bundle and DMG. |
 | `Square*Logo.png`, `StoreLogo.png` | Microsoft Store packages. Not used by the current installer. |
 
 `app/public/icon.svg` is the simplified small-size artwork, used as the page icon.
@@ -105,11 +107,19 @@ pnpm -C app tauri icon src-tauri/icons/icon.svg -o $env:TEMP\ao-icons
 
 ## Building the installer
 
-`pnpm -C app tauri build` writes a per-user installer to `target\release\bundle\nsis`. It is not code-signed.
+`pnpm -C app tauri build` writes a per-user Windows installer to `target\release\bundle\nsis`.
+
+On macOS, the same command produces `target/release/bundle/macos/Agentic Orchestrator.app` and a `.dmg` under `target/release/bundle/dmg/`. The platform configuration automatically selects `app` and `dmg`, leaving Windows NSIS packaging unchanged. The default build matches the host architecture (`aarch64` for Apple Silicon, `x86_64` for Intel); label distributed files accordingly. Universal binaries are not part of this workflow.
+
+Neither platform uses a distribution signing certificate. macOS Developer ID signing and notarisation are deliberately excluded. Recipients install by dragging the app from the mounted DMG into Applications and, if blocked at first launch, choose **System Settings → Privacy & Security → Open Anyway** after attempting to open it. See [Apple’s instructions](https://support.apple.com/en-gb/102445). No global security changes or quarantine-removal commands are needed.
+
+For a release executable without installers, run `pnpm -C app tauri build --no-bundle`.
 
 The app version comes from `app/src-tauri/Cargo.toml`. Keep `app/package.json` in step with it. The Settings dialog shows the installed version.
 
 ## Upgrading an installed copy
+
+### Windows
 
 1. Raise the version in `app/src-tauri/Cargo.toml` and `app/package.json`.
 2. Run `pnpm -C app tauri build`.
@@ -119,6 +129,20 @@ The app version comes from `app/src-tauri/Cargo.toml`. Keep `app/package.json` i
 "Uninstall before installing" also works, but it runs the old uninstaller first. If you use it, leave "Delete the application data" unticked, or the saved pane layouts are lost.
 
 Sessions and settings are kept: `state.json` and the WebView2 profile live under `%LOCALAPPDATA%`, outside the install folder, and settings missing from an older `state.json` take their defaults.
+
+### macOS
+
+1. For a versioned release, raise the version in both manifests, then run `pnpm -C app tauri build` on the desired architecture.
+2. Quit the installed app, ending its running terminals.
+3. Mount the new DMG and replace **Agentic Orchestrator.app** in Applications. Eject the DMG and launch the installed copy; use Open Anyway if prompted.
+
+Session state remains in `~/Library/Application Support/AgenticOrchestrator/state.json`. The macOS identifier is `dev.agenticorchestrator.desktop`; Tauri window state is stored under its app configuration directory (`~/Library/Application Support/dev.agenticorchestrator.desktop`). WKWebView also manages website data outside the application bundle. Replacing the app preserves these stores. The session-state override does not isolate window geometry or WebKit storage.
+
+For icon generation on macOS/Linux, use a temporary output directory:
+
+```sh
+pnpm -C app tauri icon src-tauri/icons/icon.svg -o "$(mktemp -d)"
+```
 
 ## Notes for agents working in this repo
 

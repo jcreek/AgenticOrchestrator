@@ -1,8 +1,8 @@
 # Agentic Orchestrator
 
-A Windows desktop app for running many Claude Code sessions at once. Each session gets a tab, one per repo folder or git worktree, and the tab shows whether Claude is working, waiting for input, waiting for permission, finished or idle. Each tab has the Claude terminal, extra shells, and a small IDE pane for reading what changed, editing a file and committing.
+A Windows and macOS desktop app for running many Claude Code sessions at once. Each session gets a tab, one per repo folder or git worktree, and the tab shows whether Claude is working, waiting for input, waiting for permission, finished or idle. Each tab has the Claude terminal, extra shells, and a small IDE pane for reading what changed, editing a file and committing.
 
-Windows remains the supported desktop app. Unix core support is implemented for macOS and Linux; native macOS app behaviour, packaging and full Linux validation remain in progress. See the [roadmap](docs/roadmap.md).
+Windows is the established desktop platform. macOS app behaviour and packaging are implemented, with native validation tracked separately. Linux core support is implemented; desktop validation remains in progress. See the [roadmap](docs/roadmap.md).
 
 ## Start it
 
@@ -10,7 +10,7 @@ There are two ways. Most people want the first.
 
 ### 1. From this repo (recommended)
 
-Double-click `Start Agentic Orchestrator.cmd` in the repo root.
+On Windows, double-click `Start Agentic Orchestrator.cmd` in the repo root. On macOS, double-click `Start Agentic Orchestrator.command`, or run `./"Start Agentic Orchestrator.command"` from Terminal.
 
 The first run builds the app, which takes about five minutes. After that it starts straight away, and it rebuilds by itself when you pull new commits. You need the build tools listed under Requirements.
 
@@ -20,30 +20,44 @@ Use this to put the app on a machine without the build tools.
 
 **The installer is not in this repo and there is nowhere to download it.** Someone with the build tools has to build it and pass the file on:
 
+### Windows
+
 1. In the repo root, run `pnpm -C app tauri build` (a few minutes).
 2. Take the file it writes: `target\release\bundle\nsis\Agentic Orchestrator_<version>_x64-setup.exe`. The `target` folder is ignored by git, so the file never appears in a clone.
 3. On the other machine, run that file, then start **Agentic Orchestrator** from the Start menu.
 
 It installs for the current user and needs no admin rights. It is not code-signed, so SmartScreen or Smart App Control may warn about or block it. An installed copy does not update itself: build a new installer and run it over the installed copy (see [Development](docs/development.md#upgrading-an-installed-copy)).
 
+### macOS
+
+1. On a Mac with the build tools, run `pnpm -C app tauri build`.
+2. Share the `.dmg` in `target/release/bundle/dmg/`. The `.app` is also available in `target/release/bundle/macos/`. Builds target the build Mac’s architecture: Apple Silicon (`aarch64`) or Intel (`x86_64`); use a build matching the recipient’s Mac.
+3. Open the DMG, drag **Agentic Orchestrator** into **Applications**, eject the image and open the installed app.
+
+The app has no Developer ID signature or Apple notarisation. If macOS blocks first launch, attempt to open it, then choose **System Settings → Privacy & Security → Open Anyway** and confirm. Only do this for a copy you trust; see [Apple’s instructions](https://support.apple.com/en-gb/102445). No paid Apple Developer account is required for this installation workflow. Managed Macs may restrict this override.
+
+To upgrade, quit the app (which stops its terminals), then replace the app in Applications with the new copy. Sessions and settings are stored outside the application bundle. There is no automatic updater or hosted download yet.
+
 ## Requirements
 
 | To | You need |
 |---|---|
-| Use the app | Windows 11, [Claude Code](https://code.claude.com) (`claude`) and `git` on PATH. `code` (VS Code) is optional. |
-| Build it (the `.cmd` launcher does this) | Also Rust via [rustup](https://rustup.rs), Node 24, pnpm and the Visual Studio Build Tools with the C++ workload. |
+| Use the app | Windows 11 or macOS, [Claude Code](https://code.claude.com) (`claude`) and `git` on PATH. `code` (VS Code) is optional. |
+| Build it (the repository launchers do this) | Also Rust stable via [rustup](https://rustup.rs), Node 24 and pnpm. Windows: Visual Studio Build Tools with the C++ workload. macOS: Xcode Command Line Tools (`xcode-select --install`). |
 
 The app shows a banner at startup if `claude`, `git` or `code` is missing.
 
 ## Use
 
+On macOS, use Cmd instead of Ctrl for app shortcuts, including Cmd+N/J/0/1–9/backslash/S and Cmd+Enter for form submission. Tab cycling remains Ctrl+Tab/Ctrl+Shift+Tab. Cmd+W closes a session even in a terminal; terminal Ctrl+W deletes a word.
+
 1. Press `Ctrl+N` and pick a repository.
-2. Choose where to run: in the repo folder on its current branch, or in a new worktree on its own branch. Worktrees are created beside the repo in `<repo>.worktrees\<branch>`.
+2. Choose where to run: in the repo folder on its current branch, or in a new worktree on its own branch. Worktrees are created beside the repo in `<repo>.worktrees/<branch>` (backslashes on Windows).
 3. Claude Code starts in the new tab. A folder you have not used with Claude Code before stops at its trust prompt; the tab says "Check terminal".
 
 The tab colour and icon show what the session is doing. A repo with one session is a single tab named after the repo; a repo with several gets a group label with one tab per branch. Drag a tab onto another to re-order them; dropping onto a tab of a different repo moves the whole group. When there are more tabs than fit, scroll the strip with the mouse wheel or open the overflow button at its right-hand end, which lists every session and shows how many hidden ones need you.
 
-When a session needs you and the window is in the background, Windows shows a notification and the taskbar button flashes.
+When a session needs you and the window is in the background, the app requests a notification and OS attention. Native macOS notification behaviour remains part of the pending smoke checklist.
 
 | Key | Does |
 |---|---|
@@ -64,7 +78,7 @@ When a session needs you and the window is in the background, Windows shows a no
 
 ## Settings and data
 
-State is stored in `%LOCALAPPDATA%\AgenticOrchestrator\state.json`: the workspace list, Claude session ids and settings. Unix core state uses `~/Library/Application Support/AgenticOrchestrator/state.json` on macOS and `$XDG_DATA_HOME/AgenticOrchestrator/state.json` (falling back to `~/.local/share`) on Linux. Set `AGENTIC_ORCHESTRATOR_STATE_DIR` to an absolute directory to isolate state on any platform. There is no settings screen yet; edit the file while the app is closed.
+State is stored in `%LOCALAPPDATA%\AgenticOrchestrator\state.json`: the workspace list, Claude session ids and settings. State uses `~/Library/Application Support/AgenticOrchestrator/state.json` on macOS and `$XDG_DATA_HOME/AgenticOrchestrator/state.json` (falling back to `~/.local/share`) on Linux. Set `AGENTIC_ORCHESTRATOR_STATE_DIR` to an absolute directory to isolate state on any platform. Use Settings for the available options; edit other settings in the file while the app is closed.
 
 | Setting | Meaning | Default |
 |---|---|---|
@@ -90,7 +104,7 @@ To copy untracked files such as `.env` into new worktrees, list them one per lin
 |---|---|
 | The launcher says a tool was not found on PATH | Install it (see Requirements), then open a new Explorer window so it picks up the new PATH, and run the launcher again. |
 | The launcher's build fails with "Access is denied" on the `.exe` | The app is still running. Close it and run the launcher again. |
-| Double-clicking does nothing | The app is already open; only one copy runs at a time. Look for it on the taskbar. |
+| Double-clicking does nothing | The app is already open; only one copy runs at a time. Look for it on the taskbar or Dock. |
 | A tab stays on "Check terminal" | Claude Code is waiting at a prompt the app cannot see, usually the folder trust prompt. Answer it in the terminal. |
 | Tabs show "Status unknown" | `claude agents --json` failed or timed out. The terminals still work; status returns when the command does. |
 | The app says the state file cannot be read | `state.json` is damaged. The app will not overwrite it. Fix or delete the file while the app is closed. |

@@ -201,3 +201,51 @@ unit test does not count as a smoke pass.
 - Launched: `pnpm -C app tauri dev` with isolated session state; compilation completed and the native executable started.
 - Blocked: visual/native interaction checks above. The computer-use provider could not attach to the unbundled dev executable or its bundle identifier, so no visual checklist item is claimed as passed. Clipboard, minimisation visibility, Monaco runtime workers and notifications remain unverified.
 - Pending: all five checks on native Windows, including the Windows-only `pnpm -C app test:bdd`. Do not infer Windows verification from Mac results.
+
+## macOS packaging validation (phase 4)
+
+Build on the target architecture with `pnpm -C app tauri build`. Mount the DMG
+from `target/release/bundle/dmg/`, copy the application into a temporary
+installation directory (or Applications), and eject the image before testing.
+Launch the copied app with `AGENTIC_ORCHESTRATOR_STATE_DIR` set to a fresh
+absolute directory. Verify the window loads, tool discovery finds Claude and
+Git, a disposable repository session starts, and native Quit stops the session
+and exits. Restart with the same isolated state to check persistence.
+
+This validates the copied bundle rather than the development executable.
+Separately test a browser-downloaded copy on another Mac of the matching
+architecture to exercise quarantine and the documented Open Anyway workflow.
+Do not remove quarantine attributes or disable system security protections.
+Packaging checks do not replace the phase 3 checklist or native Windows checks.
+
+### Phase 4 validation record — 2026-11-17 (Apple Silicon)
+
+- Passed: launcher `sh -n` and disposable mock-tool checks for first build,
+  cached launch, changed commit, failed build without launch/stamp update,
+  missing prerequisites, a repository path containing spaces and an unrelated
+  working directory. Finder double-click behaviour remains a manual check.
+- Passed: native `cargo test --workspace` (118 core unit tests, 8 app unit tests,
+  47 core scenarios / 215 steps), strict clippy, frontend build and 141 unit tests.
+- The temporary Rust toolchain warns that debug-info stripping cannot load
+  `libLLVM.dylib`; compilation succeeds. The sandbox initially blocked
+  `hdiutil` with “Device not configured”; packaging was retried with native
+  disk-image access.
+- Passed: `pnpm -C app tauri build` with native disk access produced
+  `Agentic Orchestrator.app` and `Agentic Orchestrator_0.2.0_aarch64.dmg`.
+  Bundle identifier and version were `dev.agenticorchestrator.desktop` / `0.2.0`.
+- Passed: mounted the DMG read-only, copied its app into a temporary directory
+  containing spaces, ejected the image and launched the copied executable with
+  isolated session state. Computer use successfully attached to this bundled app.
+  WKWebView displayed the empty overview with Cmd shortcut labels and no missing
+  tool banner. Git resolved the disposable repository and branch; Claude Code
+  launched in its terminal and displayed the folder trust prompt. The trust
+  prompt was left unanswered; no agent task was submitted.
+- Passed: native Cmd+Q exited the copied app. A native process-list check found
+  no remaining installed-app or disposable-session processes; isolated
+  `state.json` existed and the app log contained no errors. This narrow quit
+  check does not establish confirmation behaviour for running/unsaved work.
+- Pending: browser-downloaded quarantine/Open Anyway behaviour on another Mac,
+  Intel builds, upgrade/persistence interaction checks, the remaining phase 3
+  native checklist and all five native Windows checks. The earlier phase 3
+  provider attachment failure applied to the unbundled development executable;
+  it did not prevent the installed-bundle checks above.
