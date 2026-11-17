@@ -1,0 +1,125 @@
+:root {
+  color-scheme: dark;
+
+  --color-window: #16181d;
+  --color-tab: #1c1f25;
+  --color-surface: #262a31;
+  --color-panel: #1c1f25;
+  --color-terminal: #0e1013;
+  --color-border: #33373f;
+  --color-border-strong: #4a505b;
+  --color-row-divider: #262a31;
+  --color-selected: #3a3f49;
+  --color-overlay: rgba(0, 0, 0, 0.55);
+  --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.45);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --window-close-hover: #c42b1c;
+  --window-close-hover-text: #ffffff;
+  --color-text: #e8eaee;
+  --color-text-strong: #ffffff;
+  --color-text-muted: #a6adb8;
+  --color-accent: #6ea8ff;
+  --color-on-accent: #16181d;
+
+  --status-working: #5aa2ff;
+  --status-input: #f5b83d;
+  --status-permission: #c59bff;
+  --status-finished: #4cc38a;
+  --status-crashed: #ff6b6b;
+  --status-idle: #8b919b;
+  --status-unknown: #8b919b;
+
+  --attention-badge: #f5b83d;
+  --attention-badge-text: #16181d;
+  --flash-color: #c59bff;
+  --flash-input: #f5b83d;
+  --highlight-amount: 12%;
+  --flash-opacity-low: 0.16;
+  --flash-opacity-high: 0.5;
+  --flash-opacity-still: 0.4;
+
+  --diff-added: #4cc38a;
+  --diff-removed: #ff6b6b;
+  --diff-added-background: rgba(76, 195, 138, 0.18);
+  --diff-removed-background: rgba(255, 107, 107, 0.18);
+
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, monospace;
+
+  --size-title-bar: 40px;
+  --size-tab: 36px;
+  --size-tab-max: 168px;
+  --size-tab-min: 104px;
+  --size-toolbar: 34px;
+  --size-overview-row: 30px;
+  --size-button: 28px;
+  --size-status-bar: 24px;
+
+  --radius-control: 4px;
+  --radius-tab: 6px;
+  --radius-dialog: 8px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --color-window: #e6e8ec;
+    --color-tab: #dcdfe5;
+    --color-surface: #ffffff;
+    --color-panel: #f6f7f9;
+    --color-terminal: #ffffff;
+    --color-border: #c9cdd5;
+    --color-border-strong: #aab0bb;
+    --color-row-divider: #e6e8ec;
+    --color-selected: #dfe6f5;
+    --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.2);
+    --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.18);
+    --color-text: #1a1d23;
+    --color-text-strong: #1a1d23;
+    --color-text-muted: #555c68;
+    --color-accent: #1463d8;
+    --color-on-accent: #ffffff;
+
+    --status-working: #1463d8;
+    --status-input: #8a5200;
+    --status-permission: #7a3fd1;
+    --status-finished: #156f3f;
+    --status-crashed: #b3261e;
+    --status-idle: #6b7280;
+    --status-unknown: #6b7280;
+
+    --attention-badge-text: #1a1d23;
+    --flash-color: #b48cf2;
+    --highlight-amount: 20%;
+    --flash-opacity-low: 0.25;
+    --flash-opacity-high: 0.75;
+    --flash-opacity-still: 0.6;
+
+    --diff-added: #156f3f;
+    --diff-removed: #b3261e;
+    --diff-added-background: rgba(26, 138, 78, 0.16);
+    --diff-removed-background: rgba(198, 40, 40, 0.14);
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: var(--color-window);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+}

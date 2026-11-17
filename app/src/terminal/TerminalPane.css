@@ -1,0 +1,86 @@
+.terminal-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-terminal);
+}
+
+.term-tabs {
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-panel);
+  overflow: hidden;
+}
+
+.term-tab-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.term-tab {
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.term-tab:hover {
+  background: var(--color-tab);
+}
+
+.term-tab[aria-pressed="true"] {
+  background: var(--color-selected);
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+
+.term-tab-close,
+.term-tab-add {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.term-tab-close:hover,
+.term-tab-add:hover {
+  background: var(--color-tab);
+  color: var(--color-text);
+}
+
+.term-stack {
+  position: relative;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.term-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-terminal);
+}
+
+.term-slot[hidden] {
+  display: none;
+}
+
+.xterm-mount {
+  position: absolute;
+  inset: 8px 4px 4px 12px;
+}

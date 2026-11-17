@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Agentic Orchestrator">
+<rect x="78.0" y="78.0" width="868" height="868" rx="186.0" fill="#1c1f25" stroke="#4a505b" stroke-width="28"/>
+<rect x="160" y="176" width="208" height="128" rx="32" fill="#5aa2ff"/><rect x="408" y="176" width="208" height="128" rx="32" fill="#f5b83d"/><rect x="656" y="176" width="208" height="128" rx="32" fill="#4cc38a"/>
+<path d="M264 456L448 608L264 760" fill="none" stroke="#f2f4f7" stroke-width="120" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="544" y="700" width="232" height="120" rx="30" fill="#f5b83d"/>
+</svg>

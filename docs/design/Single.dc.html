@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Single session, dark, terminal only</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9cc4ff}
+@keyframes ao-flash-d{0%,100%{opacity:.16}50%{opacity:.5}}
+@keyframes ao-flash-l{0%,100%{opacity:.25}50%{opacity:.75}}
+.ao-flash-d{animation:ao-flash-d 1.2s ease-in-out infinite}
+.ao-flash-l{animation:ao-flash-l 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.ao-flash-d{animation:none;opacity:.4}.ao-flash-l{animation:none;opacity:.6}}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: #16181d; color: #e8eaee; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 12px; line-height: 16px">
+<header style="height: 40px; flex: none; display: flex; align-items: flex-end; gap: 2px; padding-left: 8px">
+<button style="height: 36px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-top: 3px solid transparent; border-radius: 6px 6px 0 0; background: none; color: #e8eaee; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="1.5" width="4.5" height="4.5"/><rect x="8" y="1.5" width="4.5" height="4.5"/><rect x="1.5" y="8" width="4.5" height="4.5"/><rect x="8" y="8" width="4.5" height="4.5"/></svg><span>Overview</span></button>
+<span style="align-self: center; margin-left: 6px; padding: 0 6px; border-left: 1px solid #33373f; color: #a6adb8; font-size: 11px; font-weight: 600; white-space: nowrap">orchestrator</span>
+<button aria-current="page" style="position: relative; flex: 1 1 0; min-width: 44px; max-width: 168px; height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 8px; overflow: hidden; border: 0; border-top: 3px solid #5aa2ff; border-radius: 6px 6px 0 0; background: #262a31; color: #ffffff; font-family: inherit; text-align: left; cursor: pointer"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#5aa2ff" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: relative; flex: none"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg><span style="position: relative; min-width: 0; display: flex; flex-direction: column"><span style="font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; line-height: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">main</span><span style="font-size: 11px; line-height: 14px; color: #5aa2ff; font-weight: 600; white-space: nowrap">Working · 2m</span></span></button>
+<button aria-label="New session" style="width: 32px; height: 32px; flex: none; align-self: center; border: 0; border-radius: 4px; background: none; color: #e8eaee; cursor: pointer"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 1v10M1 6h10"/></svg></button>
+<span style="flex: 1 0 12px"></span><div style="display: flex; align-self: stretch">
+<button aria-label="Minimise" style="width: 46px; border: 0; background: none; color: #e8eaee; cursor: pointer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 5h10"/></svg></button>
+<button aria-label="Maximise" style="width: 46px; border: 0; background: none; color: #e8eaee; cursor: pointer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+<button aria-label="Close" style="width: 46px; border: 0; background: none; color: #e8eaee; cursor: pointer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 0l10 10M10 0L0 10"/></svg></button>
+</div></header>
+<div style="height: 34px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: #262a31; border-bottom: 1px solid #33373f"><span style="font-family: 'Cascadia Mono', Consolas, monospace; color: #a6adb8; white-space: nowrap">C:\dev\orchestrator</span><span style="padding: 1px 6px; border: 1px solid #33373f; border-radius: 4px; color: #a6adb8">Repo folder</span><span style="flex-grow: 1"></span><div role="group" aria-label="Layout" style="display: flex; border: 1px solid #33373f; border-radius: 4px; overflow: hidden"><button aria-pressed="true" style="height: 22px; padding: 0 10px; border: 0; background: #3a3f49; color: #ffffff; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer">Terminal</button><button style="height: 22px; padding: 0 10px; border: 0; border-left: 1px solid #33373f; background: none; color: #a6adb8; font-family: inherit; font-size: 12px; cursor: pointer">Both</button><button style="height: 22px; padding: 0 10px; border: 0; border-left: 1px solid #33373f; background: none; color: #a6adb8; font-family: inherit; font-size: 12px; cursor: pointer">IDE</button></div><button style="height: 24px; padding: 0 10px; border: 1px solid #4a505b; background: none; color: #e8eaee; border-radius: 4px; font-family: inherit; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer">Close session <span style="font-family: 'Cascadia Mono', Consolas, monospace; font-weight: 400">Ctrl+W</span></button></div>
+<pre style="flex-grow: 1; min-height: 0; margin: 0; padding: 12px; overflow: hidden; background: #0e1013; color: #e8eaee; font-family: 'Cascadia Mono', Consolas, monospace; font-size: 12px; line-height: 18px; white-space: pre">&gt; Fix PTY resize when a pane is split
+
+<span style="color: #4cc38a">●</span> Read src-tauri/src/pty.rs (212 lines)
+<span style="color: #4cc38a">●</span> Read src/terminal/fit.ts (74 lines)
+<span style="color: #4cc38a">●</span> Update src-tauri/src/pty.rs
+  <span style="color: #a6adb8">Added 18 lines, removed 6</span>
+<span style="color: #5aa2ff">●</span> Bash: cargo check
+  <span style="color: #a6adb8">Running · 41s</span></pre>
+<footer style="height: 24px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 12px; border-top: 1px solid #33373f; color: #a6adb8"><span>1 working</span><span style="flex-grow: 1"></span><span style="font-family: 'Cascadia Mono', Consolas, monospace">Ctrl+J next needing you · Ctrl+1–9 tab · Ctrl+0 overview · Ctrl+N new</span></footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

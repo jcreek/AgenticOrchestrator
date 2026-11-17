@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Empty state, dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#6ea8ff}a:hover{color:#9cc4ff}
+@keyframes ao-flash-d{0%,100%{opacity:.16}50%{opacity:.5}}
+@keyframes ao-flash-l{0%,100%{opacity:.25}50%{opacity:.75}}
+.ao-flash-d{animation:ao-flash-d 1.2s ease-in-out infinite}
+.ao-flash-l{animation:ao-flash-l 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.ao-flash-d{animation:none;opacity:.4}.ao-flash-l{animation:none;opacity:.6}}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 720px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; background: #16181d; color: #e8eaee; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; font-size: 12px; line-height: 16px">
+<header style="height: 40px; flex: none; display: flex; align-items: flex-end; gap: 2px; padding-left: 8px">
+<button aria-current="page" style="height: 36px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-top: 3px solid #6ea8ff; border-radius: 6px 6px 0 0; background: #262a31; color: #ffffff; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="1.5" width="4.5" height="4.5"/><rect x="8" y="1.5" width="4.5" height="4.5"/><rect x="1.5" y="8" width="4.5" height="4.5"/><rect x="8" y="8" width="4.5" height="4.5"/></svg><span>Overview</span></button>
+<button aria-label="New session" style="width: 32px; height: 32px; flex: none; align-self: center; border: 0; border-radius: 4px; background: none; color: #e8eaee; cursor: pointer"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 1v10M1 6h10"/></svg></button>
+<span style="flex: 1 0 12px"></span><div style="display: flex; align-self: stretch">
+<button aria-label="Minimise" style="width: 46px; border: 0; background: none; color: #e8eaee; cursor: pointer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 5h10"/></svg></button>
+<button aria-label="Maximise" style="width: 46px; border: 0; background: none; color: #e8eaee; cursor: pointer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+<button aria-label="Close" style="width: 46px; border: 0; background: none; color: #e8eaee; cursor: pointer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M0 0l10 10M10 0L0 10"/></svg></button>
+</div></header>
+<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #262a31">
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="#a6adb8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="7" width="32" height="26" rx="3"/><path d="M11 16l5 4-5 4M20 24h8"/></svg>
+<h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; color: #ffffff">No sessions yet</h1>
+<p style="margin: 0; max-width: 420px; color: #a6adb8; font-size: 13px; line-height: 20px; text-align: center">Start Claude Code in a repo folder, or in a new git worktree on its own branch. Each session opens as a tab, and the tab shows when it needs you.</p>
+<button style="height: 32px; padding: 0 10px; border: 0; background: #6ea8ff; color: #16181d; border-radius: 4px; font-family: inherit; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer">New session <span style="font-family: 'Cascadia Mono', Consolas, monospace; font-weight: 400">Ctrl+N</span></button>
+<div style="display: grid; grid-template-columns: auto auto; gap: 6px 16px; margin-top: 16px; color: #a6adb8"><span style="font-family: 'Cascadia Mono', Consolas, monospace; color: #e8eaee">Ctrl+J</span><span>Jump to the next session that needs you</span><span style="font-family: 'Cascadia Mono', Consolas, monospace; color: #e8eaee">Ctrl+1–9</span><span>Switch to a session tab</span><span style="font-family: 'Cascadia Mono', Consolas, monospace; color: #e8eaee">Ctrl+0</span><span>Back to this overview</span></div>
+</div>
+<footer style="height: 24px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 12px; border-top: 1px solid #33373f; color: #a6adb8"><span>0 sessions</span><span style="flex-grow: 1"></span><span style="font-family: 'Cascadia Mono', Consolas, monospace">Ctrl+N new session</span></footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

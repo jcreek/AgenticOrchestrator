@@ -1,0 +1,19 @@
+{
+  "identifier": "dev.agenticorchestrator.bdd",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Agentic Orchestrator",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 560,
+        "decorations": false,
+        "focus": false,
+        "focusable": false,
+        "skipTaskbar": true
+      }
+    ]
+  }
+}

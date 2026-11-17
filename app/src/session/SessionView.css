@@ -1,0 +1,124 @@
+.session {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.session[hidden] {
+  display: none;
+}
+
+.session-toolbar {
+  height: var(--size-toolbar);
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.session-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text-muted);
+}
+
+.session-kind {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text-muted);
+}
+
+.session-space {
+  flex-grow: 1;
+}
+
+.segmented {
+  flex: none;
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.segmented button {
+  height: 22px;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--color-border);
+}
+
+.segmented button:hover {
+  background: var(--color-tab);
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--color-selected);
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+
+.session-body {
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.session-stacked {
+  flex-direction: column;
+}
+
+.pane {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pane[hidden] {
+  display: none;
+}
+
+.pane-ide {
+  background: var(--color-panel);
+}
+
+.pane-ide > * {
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.separator {
+  order: 1;
+  width: 4px;
+  flex: none;
+  background: var(--color-border);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.session-stacked .separator {
+  width: auto;
+  height: 4px;
+  cursor: row-resize;
+}
+
+.separator:hover,
+.separator:focus-visible {
+  background: var(--color-accent);
+  outline: none;
+}

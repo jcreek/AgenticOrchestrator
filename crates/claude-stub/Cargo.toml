@@ -1,0 +1,23 @@
+[package]
+name = "claude-stub"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Deterministic stand-in for Claude Code, used only by the @ui BDD suite"
+
+[[bin]]
+name = "claude"
+path = "src/main.rs"
+
+[[bin]]
+name = "ao-proc"
+path = "src/ao_proc.rs"
+
+[dependencies]
+serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows ={ version = "0.62.2", features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading"] }
+
+[lints]
+workspace = true

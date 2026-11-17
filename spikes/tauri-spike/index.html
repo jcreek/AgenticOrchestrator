@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orchestrator spike</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <div class="toolbar">
+      <button id="open-claude">Open Claude in main terminal</button>
+      <span>Press Ctrl+W, Ctrl+N, Ctrl+T, Ctrl+Tab, Ctrl+Shift+P, F1, F5 — each should appear in the log.</span>
+    </div>
+    <div class="grid">
+      <div id="term"></div>
+      <div id="editor"></div>
+      <div id="flood"></div>
+      <pre id="log"></pre>
+    </div>
+  </body>
+</html>
