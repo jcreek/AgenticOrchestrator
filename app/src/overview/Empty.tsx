@@ -1,3 +1,4 @@
+import { shortcutHints } from "../state/shortcuts";
 import "./Overview.css";
 
 export function Empty({ onNewSession }: { onNewSession: () => void }) {
@@ -13,14 +14,14 @@ export function Empty({ onNewSession }: { onNewSession: () => void }) {
         the tab shows when it needs you.
       </p>
       <button type="button" className="btn btn-primary" onClick={onNewSession} autoFocus>
-        New session <span className="kbd">Ctrl+N</span>
+        New session <span className="kbd">{shortcutHints("Ctrl+N")}</span>
       </button>
       <div className="empty-keys">
-        <span className="mono">Ctrl+J</span>
+        <span className="mono">{shortcutHints("Ctrl+J")}</span>
         <span>Jump to the next session that needs you</span>
-        <span className="mono">Ctrl+1–9</span>
+        <span className="mono">{shortcutHints("Ctrl+1–9")}</span>
         <span>Switch to a session tab</span>
-        <span className="mono">Ctrl+0</span>
+        <span className="mono">{shortcutHints("Ctrl+0")}</span>
         <span>Back to this overview</span>
       </div>
     </div>

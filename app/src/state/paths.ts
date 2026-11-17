@@ -5,7 +5,7 @@ function stripVerbatim(path: string): string {
 }
 
 function trimSeparators(path: string): string {
-  return path.replace(/[\\/]+$/, "");
+  return path.replace(/[\\/]+$/, "") || (path.startsWith("/") ? "/" : path);
 }
 
 /** The repo folder a group key (the canonical git common dir) stands for. */
@@ -28,7 +28,8 @@ export function baseName(path: string): string {
 export function worktreeFolder(repoRoot: string, branch: string, worktreeRoot: string | null): string {
   const repo = trimSeparators(stripVerbatim(repoRoot));
   const root = worktreeRoot ? trimSeparators(worktreeRoot) : `${repo}.worktrees`;
-  return `${root}\\${pathSafe(branch)}`;
+  const separator = repoRoot.includes("\\") ? "\\" : "/";
+  return `${root.endsWith(separator) ? root : root + separator}${pathSafe(branch)}`;
 }
 
 export function samePath(a: string, b: string): boolean {

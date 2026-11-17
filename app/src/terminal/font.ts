@@ -1,4 +1,4 @@
-const BUILT_IN_FONTS = '"Cascadia Mono", Consolas, monospace';
+const BUILT_IN_FONTS = '"Cascadia Mono", Consolas, ui-monospace, "SF Mono", Menlo, monospace';
 
 export function terminalFontFamily(custom: string): string {
   const name = custom.replace(/"/g, "").trim();

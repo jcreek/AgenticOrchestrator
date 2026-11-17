@@ -6,6 +6,9 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
+	approveQuit: (options?: InvokeOptions) => __TAURI_INVOKE<void>("approve_quit", undefined, options),
+	/**  Called only after the quit-event listener is installed. */
+	quitGuardReady: (ready: boolean, options?: InvokeOptions) => __TAURI_INVOKE<void>("quit_guard_ready", { ready }, options),
 	getState: (options?: InvokeOptions) => __TAURI_INVOKE<AppState_Serialize>("get_state", undefined, options),
 	addWorkspace: (path: string, options?: InvokeOptions) => __TAURI_INVOKE<Workspace_Serialize>("add_workspace", { path }, options),
 	removeWorkspace: (id: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("remove_workspace", { id }, options),
@@ -82,6 +85,7 @@ export const commands = {
 
 /** Events */
 export const events = {
+	quitRequested: makeEvent<QuitRequested, QuitRequested>("quit-requested"),
 	statusChanged: makeEvent<StatusChanged_Serialize, StatusChanged_Deserialize>("status-changed"),
 	terminalExited: makeEvent<TerminalExited, TerminalExited>("terminal-exited"),
 };
@@ -217,6 +221,8 @@ export type FileContent = {
 export type FileKind = "added" | "modified" | "deleted" | "renamed" | "untracked" | "conflicted";
 
 export type LayoutMode = "terminal" | "both" | "ide";
+
+export type QuitRequested = null;
 
 export type RepoGroup = {
 	key: string,

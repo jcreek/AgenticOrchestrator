@@ -1,3 +1,4 @@
+import { terminalClipboard } from "../state/shortcuts";
 import { Channel } from "@tauri-apps/api/core";
 import { FitAddon } from "@xterm/addon-fit";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
@@ -108,13 +109,13 @@ export function XTerm(props: Props) {
     term.attachCustomKeyEventHandler((event) => {
       if (event.type !== "keydown") return true;
       if (matchShortcut(event, true)) return false;
-      if (event.key === "Enter" && event.shiftKey && !event.ctrlKey && !event.altKey) {
+      if (event.key === "Enter" && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
         send("\n");
         return false;
       }
       // Returning false leaves Ctrl+V to the browser, whose paste event xterm turns into a bracketed paste.
-      if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "v") return false;
-      if (event.ctrlKey && event.key.toLowerCase() === "c" && term.hasSelection()) {
+      if (terminalClipboard(event, term.hasSelection()) === "paste") return false;
+      if (terminalClipboard(event, term.hasSelection()) === "copy") {
         copy(term);
         return false;
       }

@@ -52,7 +52,20 @@ Shared by macOS and Linux. All logic goes in `crates/core` with tests. The imple
 
 **Exit:** `cargo test --workspace` and clippy pass on macOS and on Windows.
 
-## Phase 3: macOS app behaviour (medium)
+## Phase 3: macOS app behaviour (implemented; native smoke and Windows verification pending)
+
+The implementation adds the Mac overlay title bar and traffic-light space, a native
+quit-to-React confirmation bridge, platform shortcut matching and labels, POSIX
+worktree previews and Apple font fallbacks. Cmd+Tab remains reserved by macOS;
+Ctrl+Tab and Ctrl+Shift+Tab cycle session tabs. Cmd+W closes the selected session,
+while terminal Ctrl+W remains word deletion. The native menu does not reserve
+Cmd+W for closing the window. macOS alone uses
+`dev.agenticorchestrator.desktop`, preserving the Windows identifier and window
+positions. The Rust workspace/core BDD checks, strict clippy and frontend build
+and unit tests pass on macOS. The dev executable launches, but native interaction
+checks remain pending because the computer-use provider cannot attach to it.
+See the manual checklist and dated results in `docs/testing.md`. Packaging remains
+phase 4; Windows still needs all five native checks.
 
 1. **Window**: a `tauri.macos.conf.json` with an overlay title bar; hide the HTML window buttons in `TitleBar.tsx` on macOS and leave room for the traffic lights.
 2. **Quit guard** (`app/src-tauri/src/lib.rs`) *(inferred)*: Cmd+Q and Dock > Quit bypass the close confirmation. Handle `ExitRequested` and route it through the existing guard in `App.tsx`.
@@ -60,7 +73,7 @@ Shared by macOS and Linux. All logic goes in `crates/core` with tests. The imple
 4. **Paths in the UI** (`app/src/state/paths.ts`): join with the separator the repo path uses.
 5. **Fonts** (`theme.css`, `terminal/font.ts`): add `-apple-system`, `ui-monospace`, "SF Mono" and Menlo to the stacks.
 6. **WebKit checks** *(all inferred)*: clipboard paste on right-click, `document.hidden` when minimised, Monaco workers, `scrollbar-width`, notifications.
-7. **Bundle identifier**: `dev.agenticorchestrator.app` ends in `.app`, which clashes on macOS. Renaming it resets saved window positions on Windows, so it needs a decision.
+7. **Bundle identifier**: macOS overrides it with `dev.agenticorchestrator.desktop`; Windows retains `dev.agenticorchestrator.app` and its saved window positions.
 
 **Exit:** `pnpm -C app tauri dev` runs on a Mac, and a manual smoke checklist passes. The checklist is the `@ui` feature files walked by hand, and goes in `docs/testing.md`.
 

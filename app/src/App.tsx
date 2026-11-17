@@ -1,3 +1,6 @@
+import { createQuitController } from "./state/quit";
+import { platform } from "./state/platform";
+import { shortcutHints } from "./state/shortcuts";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
@@ -35,8 +38,8 @@ import { batchReducer, initialBatch, stickyToasts } from "./state/toasts";
 import "./App.css";
 
 const SNOOZE_MS = 10 * 60_000;
-const SESSION_HINTS = "Ctrl+J next needing you · Ctrl+1–9 tab · Ctrl+0 overview · Ctrl+\\ layout";
-const OVERVIEW_HINTS = "Arrows move · Enter open tab · Ctrl+J next needing you · Ctrl+1–9 tab · Ctrl+W close session · Ctrl+N new";
+const SESSION_HINTS = shortcutHints("Ctrl+J next needing you · Ctrl+1–9 tab · Ctrl+0 overview · Ctrl+\\ layout");
+const OVERVIEW_HINTS = shortcutHints("Arrows move · Enter open tab · Ctrl+J next needing you · Ctrl+1–9 tab · Ctrl+W close session · Ctrl+N new");
 const NO_SHELLS: TerminalInfo_Serialize[] = [];
 
 type Boot = { state: "loading" } | { state: "ready" } | { state: "failed"; unreadable: boolean; message: string };
@@ -153,16 +156,29 @@ export default function App() {
     if (activeId) dispatchBatch({ type: "forget", id: activeId });
   }, [activeId]);
 
+  const quitController = useMemo(() => createQuitController({
+    needsConfirmation: () => Boolean(guardRef.current && readyRef.current),
+    showConfirmation: () => setDialog({ type: "quit" }),
+    hideConfirmation: () => setDialog(null),
+    close: () => platform === "macos" ? commands.approveQuit() : getCurrentWindow().destroy(),
+    onError: (error) => setAppError(errorMessage(error)),
+  }), []);
+
   useEffect(() => {
-    const stop = getCurrentWindow().onCloseRequested((event) => {
-      if (!guardRef.current || !readyRef.current) return;
-      event.preventDefault();
-      setDialog({ type: "quit" });
-    });
+    let disposed = false;
+    const quitListener = events.quitRequested.listen(() => quitController.request());
+    void quitListener.then(async () => {
+      if (disposed) return;
+      await commands.quitGuardReady(true);
+    }).catch((error: unknown) => setAppError(errorMessage(error)));
+    const stop = getCurrentWindow().onCloseRequested((event) => quitController.request(event));
     return () => {
+      disposed = true;
+      void commands.quitGuardReady(false).catch(() => undefined);
+      void quitListener.then((unlisten) => unlisten(), () => undefined);
       stop.then((unlisten) => unlisten(), () => undefined);
     };
-  }, []);
+  }, [quitController]);
 
   useEffect(() => {
     const before = previousStatus.current;
@@ -469,7 +485,7 @@ export default function App() {
           />
         </StatusBar>
       ) : workspaces.length === 0 ? (
-        <StatusBar hints="Ctrl+N new session">
+        <StatusBar hints={shortcutHints("Ctrl+N new session")}>
           <span>0 sessions</span>
         </StatusBar>
       ) : (
@@ -527,8 +543,8 @@ export default function App() {
       {dialog?.type === "quit" && (
         <QuitDialog
           guard={guardRef.current ?? { running: 0, unsaved: 0 }}
-          onQuit={() => void getCurrentWindow().destroy()}
-          onCancel={() => setDialog(null)}
+          onQuit={() => void quitController.approve()}
+          onCancel={() => quitController.cancel()}
         />
       )}
       {dialog?.type === "settings" && (

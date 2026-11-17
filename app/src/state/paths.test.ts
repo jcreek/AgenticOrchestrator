@@ -37,3 +37,12 @@ describe("samePath and baseName", () => {
     expect(baseName("C:\\dev\\web-console\\")).toBe("web-console");
   });
 });
+
+it("previews POSIX worktrees with native separators, including a root override", () => {
+  expect(worktreeFolder("/Users/me/repo/", "feature/test", null)).toBe("/Users/me/repo.worktrees/feature-test");
+  expect(worktreeFolder("/Users/me/repo", "fix", "/Volumes/trees/")).toBe("/Volumes/trees/fix");
+  expect(worktreeFolder("/Users/me/repo", "fix", "/")).toBe("/fix");
+  expect(worktreeFolder("C:\\repo", "fix", "D:\\")).toBe("D:\\fix");
+  expect(worktreeFolder("C:/repo", "fix", "D:/trees/")).toBe("D:/trees/fix");
+  expect(samePath("/Users/me/Repo/", "/users/me/repo")).toBe(true);
+});

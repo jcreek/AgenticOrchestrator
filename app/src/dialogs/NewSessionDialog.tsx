@@ -1,3 +1,4 @@
+import { shortcutHints, submitShortcut } from "../state/shortcuts";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { commands, type Branches_Serialize, type CommandOutput } from "../bindings";
 import { errorMessage } from "../state/errors";
@@ -140,7 +141,7 @@ export function NewSessionDialog({ workspaces, knownRepos, initialRepo, worktree
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" && event.ctrlKey) {
+    if (submitShortcut(event)) {
       event.preventDefault();
       void submit();
     }
@@ -161,7 +162,7 @@ export function NewSessionDialog({ workspaces, knownRepos, initialRepo, worktree
         Cancel <span className="kbd">Esc</span>
       </button>
       <button type="button" className="btn btn-primary" disabled={busy || lookingUp} onClick={() => void submit()}>
-        {busy ? "Starting…" : "Start session"} <span className="kbd">Ctrl+Enter</span>
+        {busy ? "Starting…" : "Start session"} <span className="kbd">{shortcutHints("Ctrl+Enter")}</span>
       </button>
     </>
   );

@@ -324,3 +324,7 @@
 .session-menu-time {
   text-align: right;
 }
+
+.title-bar-macos { padding-left: 80px; }
+
+.tab-strip::-webkit-scrollbar { display: none; }

@@ -43,8 +43,8 @@
   --diff-added-background: rgba(76, 195, 138, 0.18);
   --diff-removed-background: rgba(255, 107, 107, 0.18);
 
-  --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Cascadia Mono", Consolas, monospace;
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", -apple-system, system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, ui-monospace, "SF Mono", Menlo, monospace;
 
   --size-title-bar: 40px;
   --size-tab: 36px;

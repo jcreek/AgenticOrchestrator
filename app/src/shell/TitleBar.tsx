@@ -1,3 +1,5 @@
+import { platform } from "../state/platform";
+import { shortcutHints } from "../state/shortcuts";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { type PointerEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { SessionTab } from "../state/model";
@@ -127,7 +129,7 @@ export function TitleBar({ groups, activeId, needYou, now, showTabs = true, iner
 
   const stripClass = ["tab-strip", view.fadeStart && "tab-strip-fade-start", view.fadeEnd && "tab-strip-fade-end", drag && "tab-strip-dragging"];
   return (
-    <header className="title-bar" data-tauri-drag-region>
+    <header className={platform === "macos" ? "title-bar title-bar-macos" : "title-bar"} data-tauri-drag-region>
       {showTabs && (
         <>
           <button
@@ -194,7 +196,7 @@ export function TitleBar({ groups, activeId, needYou, now, showTabs = true, iner
             })}
           </div>
           <OverflowMenu groups={groups} activeId={activeId} hidden={view.hidden} now={now} inert={inert} onSelect={onSelect} />
-          <button type="button" className="new-session" inert={inert} aria-label="New session" title="New session (Ctrl+N)" onClick={onNewSession}>
+          <button type="button" className="new-session" inert={inert} aria-label="New session" title={shortcutHints("New session (Ctrl+N)")} onClick={onNewSession}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
               <path d="M6 1v10M1 6h10" />
             </svg>
@@ -208,7 +210,7 @@ export function TitleBar({ groups, activeId, needYou, now, showTabs = true, iner
         </>
       )}
       <span className="title-bar-space" data-tauri-drag-region />
-      <WindowControls />
+      {platform !== "macos" && <WindowControls />}
     </header>
   );
 }

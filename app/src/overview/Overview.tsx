@@ -1,3 +1,4 @@
+import { shortcutHints } from "../state/shortcuts";
 import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from "react";
 import { KIND_LABEL, type SessionTab } from "../state/model";
 import type { TabGroup } from "../state/order";
@@ -87,10 +88,10 @@ export function Overview(props: Props) {
           </button>
         )}
         <button type="button" className="btn btn-attention" disabled={!anyNeedsYou} onClick={onNextNeedingYou}>
-          Next needing you <span className="kbd">Ctrl+J</span>
+          Next needing you <span className="kbd">{shortcutHints("Ctrl+J")}</span>
         </button>
         <button type="button" className="btn" onClick={onNewSession}>
-          New session <span className="kbd kbd-dim">Ctrl+N</span>
+          New session <span className="kbd kbd-dim">{shortcutHints("Ctrl+N")}</span>
         </button>
       </div>
       <div className="ov-grid ov-head" aria-hidden="true">

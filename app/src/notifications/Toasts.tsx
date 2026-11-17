@@ -1,3 +1,4 @@
+import { shortcutHints } from "../state/shortcuts";
 import type { CSSProperties } from "react";
 import type { SessionTab } from "../state/model";
 import { StatusIcon } from "../shell/StatusIcon";
@@ -51,7 +52,7 @@ export function Toasts({ sticky, finished, jumpId, onGoTo, onSnooze, onDismiss, 
           ))}
           <div className="toast-actions">
             <button type="button" className="btn btn-sm" onClick={onShowOverview}>
-              Show in overview <span className="kbd">Ctrl+0</span>
+              Show in overview <span className="kbd">{shortcutHints("Ctrl+0")}</span>
             </button>
           </div>
         </div>
@@ -71,7 +72,7 @@ export function Toasts({ sticky, finished, jumpId, onGoTo, onSnooze, onDismiss, 
           <span className="mono">{title(tab)}</span>
           <div className="toast-actions">
             <button type="button" className="btn btn-sm btn-primary" onClick={() => onGoTo(tab.id)}>
-              Go to tab{tab.id === jumpId && <span className="kbd"> Ctrl+J</span>}
+              Go to tab{tab.id === jumpId && <span className="kbd">{shortcutHints(" Ctrl+J")}</span>}
             </button>
             <button type="button" className="btn btn-sm" onClick={() => onSnooze(tab.id)}>
               Snooze 10 min

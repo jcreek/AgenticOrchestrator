@@ -2,6 +2,7 @@ mod error;
 mod files;
 mod git;
 mod misc;
+mod quit;
 mod state;
 mod status;
 mod terminals;
@@ -19,6 +20,8 @@ const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/binding
 fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(collect_commands![
+            quit::approve_quit,
+            quit::quit_guard_ready,
             state::get_state,
             state::add_workspace,
             state::remove_workspace,
@@ -58,13 +61,23 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             misc::check_tools,
             misc::detect_nerd_font,
         ])
-        .events(collect_events![status::StatusChanged, terminals::TerminalExited])
+        .events(collect_events![
+            status::StatusChanged,
+            terminals::TerminalExited,
+            quit::QuitRequested
+        ])
         .typ::<error::AppError>()
-        .constant("KILLED_EXIT_CODE", orchestrator_core::terminal::KILLED_EXIT_CODE)
+        .constant(
+            "KILLED_EXIT_CODE",
+            orchestrator_core::terminal::KILLED_EXIT_CODE,
+        )
 }
 
 #[cfg(any(debug_assertions, test))]
-fn export_bindings(builder: &tauri_specta::Builder<tauri::Wry>, path: &std::path::Path) -> Result<(), String> {
+fn export_bindings(
+    builder: &tauri_specta::Builder<tauri::Wry>,
+    path: &std::path::Path,
+) -> Result<(), String> {
     builder
         .export(specta_typescript::Typescript::default(), path)
         .map_err(|error| error.to_string())
@@ -89,6 +102,7 @@ pub fn run() {
     }
 
     let app = tauri::Builder::default()
+        .manage(quit::QuitState::default())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
@@ -105,6 +119,8 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
+            #[cfg(target_os = "macos")]
+            app.set_menu(quit::macos_menu(app.handle())?)?;
             let (poll_wake, woken) = std::sync::mpsc::sync_channel(1);
             app.manage(Ctx::load(app.handle(), poll_wake));
             if let Ok(saved) = app.state::<Ctx>().state() {
@@ -127,6 +143,17 @@ pub fn run() {
     match app {
         // The process exits without dropping managed state, so terminals are killed here.
         Ok(app) => app.run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let RunEvent::ExitRequested { ref api, .. } = event
+                && app.state::<quit::QuitState>().should_guard()
+                && let Some(window) = app.get_webview_window("main")
+            {
+                use tauri_specta::Event;
+                api.prevent_exit();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+                let _ = quit::QuitRequested.emit(app);
+            }
             if let RunEvent::Exit = event {
                 app.state::<Ctx>().close_all_terminals();
             }
@@ -143,7 +170,8 @@ mod tests {
     fn committed_bindings_match_the_commands() {
         let dir = tempfile::tempdir().expect("tempdir");
         let generated_path = dir.path().join("bindings.ts");
-        export_bindings(&specta_builder(), &generated_path).unwrap_or_else(|error| panic!("{error}"));
+        export_bindings(&specta_builder(), &generated_path)
+            .unwrap_or_else(|error| panic!("{error}"));
         let generated = std::fs::read_to_string(&generated_path).expect("generated bindings");
         if std::env::var_os("UPDATE_BINDINGS").is_some_and(|value| value == "1") {
             std::fs::write(BINDINGS_PATH, &generated).expect("write bindings");

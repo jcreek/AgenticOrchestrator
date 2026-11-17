@@ -1,3 +1,4 @@
+import { shortcutHints, submitShortcut } from "../state/shortcuts";
 import { type KeyboardEvent, useId, useState } from "react";
 import { commands } from "../bindings";
 import { toAppError } from "./errors";
@@ -50,7 +51,7 @@ export function CommitBox({ workspaceId, hasStaged, onDone }: {
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Enter" && event.ctrlKey) {
+    if (submitShortcut(event)) {
       event.preventDefault();
       commit();
     }
@@ -61,7 +62,7 @@ export function CommitBox({ workspaceId, hasStaged, onDone }: {
       <textarea
         className="ide-commit-message"
         aria-label="Commit message"
-        placeholder="Commit message (Ctrl+Enter to commit)"
+        placeholder={shortcutHints("Commit message (Ctrl+Enter to commit)")}
         rows={3}
         value={message}
         onChange={(event) => setMessage(event.target.value)}
@@ -79,7 +80,7 @@ export function CommitBox({ workspaceId, hasStaged, onDone }: {
           className="ide-action ide-action--primary"
           disabled={reason !== null || busy !== null}
           aria-describedby={reasonId}
-          aria-keyshortcuts="Control+Enter"
+          aria-keyshortcuts={shortcutHints("Ctrl+Enter").replace("Cmd", "Meta").replace("Ctrl", "Control")}
           onClick={commit}
         >
           Commit

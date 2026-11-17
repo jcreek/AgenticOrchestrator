@@ -1,3 +1,4 @@
+import { shortcutHints } from "../state/shortcuts";
 import { memo, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { TerminalInfo_Serialize, WorkspaceStatus_Serialize } from "../bindings";
 import { IdePane } from "../ide/IdePane";
@@ -110,14 +111,14 @@ export const SessionView = memo(function SessionView(props: Props) {
             <button type="button" className="btn-plain" onClick={() => onLayout({ ...layout, stacked: !layout.stacked })}>
               {layout.stacked ? "Side by side" : "Stack"}
             </button>
-            <button type="button" className="btn-plain" title="Close session (Ctrl+W)" onClick={onClose}>
+            <button type="button" className="btn-plain" title={shortcutHints("Close session (Ctrl+W)")} onClick={onClose}>
               Close session
             </button>
           </>
         )}
         {!both && (
           <button type="button" className="btn btn-sm" onClick={onClose}>
-            Close session <span className="kbd">Ctrl+W</span>
+            Close session <span className="kbd">{shortcutHints("Ctrl+W")}</span>
           </button>
         )}
       </div>
