@@ -104,7 +104,7 @@ To copy untracked files such as `.env` into new worktrees, list them one per lin
 
 | Problem | Fix |
 |---|---|
-| The launcher says a tool was not found on PATH | Install it (see Requirements), then open a new Explorer window so it picks up the new PATH, and run the launcher again. |
+| The launcher says a tool was not found on PATH | Install it (see Requirements), then open a new Explorer window so it picks up the new PATH, and run the launcher again. On macOS/Linux the app reads the login shell environment and also searches `~/.local/bin`, where native Claude installations may live. Restart the app after installing tools. |
 | The launcher's build fails with "Access is denied" on the `.exe` | The app is still running. Close it and run the launcher again. |
 | Double-clicking does nothing | The app is already open; only one copy runs at a time. Look for it on the taskbar or Dock. |
 | A tab stays on "Check terminal" | Claude Code is waiting at a prompt the app cannot see, usually the folder trust prompt. Answer it in the terminal. |

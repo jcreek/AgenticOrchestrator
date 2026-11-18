@@ -21,8 +21,30 @@ pub fn environment() -> &'static Environment {
         let inherited: Environment = std::env::vars_os().collect();
         #[cfg(unix)]
         let inherited = login_environment(&inherited).unwrap_or(inherited);
+        #[cfg(unix)]
+        let inherited = with_user_bin(inherited);
         child_environment(inherited)
     })
+}
+
+/// Native CLI installers use ~/.local/bin, which a desktop launch or a non-interactive
+/// login shell may omit. Keep configured PATH entries ahead of this fallback.
+#[cfg(unix)]
+fn with_user_bin(mut env: Environment) -> Environment {
+    use std::{ffi::OsStr, path::Path};
+    let Some(home) = env.get(OsStr::new("HOME")).filter(|home| Path::new(home).is_absolute()) else {
+        return env;
+    };
+    let folder = Path::new(home).join(".local/bin");
+    let mut paths: Vec<_> = env.get(OsStr::new("PATH"))
+        .map(|path| std::env::split_paths(path).collect()).unwrap_or_default();
+    if !paths.contains(&folder) {
+        paths.push(folder);
+        if let Ok(path) = std::env::join_paths(paths) {
+            env.insert("PATH".into(), path);
+        }
+    }
+    env
 }
 
 #[cfg(unix)]
@@ -91,6 +113,31 @@ fn capture(inherited: &Environment, shell: &str, timeout: Duration) -> Option<En
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn user_bin_fallback_resolves_claude_without_overriding_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join(".local/bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let claude = bin.join("claude");
+        std::fs::write(&claude, "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&claude, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let env = with_user_bin(Environment::from([
+            ("HOME".into(), dir.path().into()),
+            ("PATH".into(), "/usr/bin:/bin".into()),
+        ]));
+        assert_eq!(crate::terminal::resolve_program("claude", &env), claude);
+        let paths: Vec<_> = std::env::split_paths(&env[&OsString::from("PATH")]).collect();
+        assert_eq!(paths, [std::path::PathBuf::from("/usr/bin"), "/bin".into(), bin]);
+        assert_eq!(with_user_bin(env.clone()), env);
+    }
+
+    #[test]
+    fn user_bin_fallback_requires_an_absolute_home() {
+        for env in [Environment::new(), Environment::from([("HOME".into(), "relative".into())])] {
+            assert_eq!(with_user_bin(env.clone()), env);
+        }
+    }
 
     fn fixture(body: &str) -> (tempfile::TempDir, String) {
         let dir = tempfile::tempdir().unwrap();
