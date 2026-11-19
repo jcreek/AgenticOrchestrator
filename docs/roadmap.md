@@ -36,7 +36,8 @@ in [Testing](testing.md).
 
 ## Windows regression validation
 
-Run all five checks from `CLAUDE.md` on native Windows and record the results:
+All five checks from `CLAUDE.md` passed on native Windows on 2026-11-19 (see
+[Testing](testing.md)). Rerun them on native Windows after cross-platform changes:
 
 ```sh
 cargo test --workspace

@@ -277,3 +277,12 @@ Packaging checks do not replace the phase 3 checklist or native Windows checks.
   checks and the outstanding macOS manual smoke checklist remain pending.
 - macOS UI automation is deliberately excluded. Windows has the automated
   `@ui` harness; Linux automation remains phase 5 work.
+
+### Windows regression validation record — 2026-11-19 (Windows 11, v0.3.3)
+
+- Passed: `cargo test --workspace` (145 core unit tests with 1 ignored, 8 app
+  unit tests, 47 core scenarios / 215 steps).
+- Passed: `cargo clippy --workspace --all-targets -- -D warnings`.
+- Passed: `pnpm -C app build` (only the existing chunk-size warning) and 141
+  frontend unit tests.
+- Passed: `pnpm -C app test:bdd` (47 `@ui` scenarios / 330 steps).
