@@ -1,6 +1,7 @@
 import { shortcutHints } from "../state/shortcuts";
 import { memo, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { TerminalInfo_Serialize, WorkspaceStatus_Serialize } from "../bindings";
+import { NotesDialog } from "../dialogs/NotesDialog";
 import { IdePane } from "../ide/IdePane";
 import { clampShare, MAX_SHARE, MIN_SHARE, type Layout, type LayoutMode } from "../state/layout";
 import { KIND_LABEL, type ClaudeLaunch, type Summary, type Workspace } from "../state/model";
@@ -24,6 +25,7 @@ interface Props {
   onRemove: (id: string) => void;
   onRetryStatus: () => void;
   onDirtyChange: (id: string, dirty: boolean) => void;
+  onNotesSaved: () => void;
 }
 
 const MODES: [LayoutMode, string][] = [
@@ -42,6 +44,8 @@ export const SessionView = memo(function SessionView(props: Props) {
   const layout = dragShare === null ? props.layout : { ...props.layout, terminalShare: dragShare };
   const bodyRef = useRef<HTMLDivElement>(null);
   const [ideMounted, setIdeMounted] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const notesPreview = workspace.notes.trim().split("\n")[0];
   const both = layout.mode === "both";
   const terminalFirst = layout.stacked ? layout.swapped : !layout.swapped;
   const firstShare = terminalFirst ? layout.terminalShare : 1 - layout.terminalShare;
@@ -91,6 +95,14 @@ export const SessionView = memo(function SessionView(props: Props) {
         </span>
         {summary && <span className="session-kind">{KIND_LABEL[summary.kind]}</span>}
         <span className="session-space" />
+        <button
+          type="button"
+          className="btn-plain"
+          title={notesPreview || "Add notes for this session"}
+          onClick={() => setNotesOpen(true)}
+        >
+          Notes{notesPreview && <span className="notes-dot" aria-hidden="true" />}
+        </button>
         <div className="segmented" role="group" aria-label="Layout">
           {MODES.map(([mode, label]) => (
             <button
@@ -167,6 +179,7 @@ export const SessionView = memo(function SessionView(props: Props) {
           {ideMounted && <IdePane workspaceId={id} onDirtyChange={(dirty) => props.onDirtyChange(id, dirty)} />}
         </section>
       </div>
+      {notesOpen && <NotesDialog workspace={workspace} onSaved={props.onNotesSaved} onClose={() => setNotesOpen(false)} />}
     </div>
   );
 });

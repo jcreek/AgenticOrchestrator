@@ -13,6 +13,7 @@ export const commands = {
 	addWorkspace: (path: string, options?: InvokeOptions) => __TAURI_INVOKE<Workspace_Serialize>("add_workspace", { path }, options),
 	removeWorkspace: (id: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("remove_workspace", { id }, options),
 	reorderWorkspaces: (ids: string[], options?: InvokeOptions) => __TAURI_INVOKE<null>("reorder_workspaces", { ids }, options),
+	setWorkspaceNotes: (id: string, notes: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("set_workspace_notes", { id, notes }, options),
 	updateSettings: (settings: Settings_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<Settings_Serialize>("update_settings", { settings }, options),
 	/**  Opens the native folder picker; `None` when the user cancels. */
 	pickFolder: (options?: InvokeOptions) => __TAURI_INVOKE<string | null>("pick_folder", undefined, options),
@@ -388,6 +389,7 @@ export type Workspace_Deserialize = {
 	path?: string,
 	claudeSessionId?: string | null,
 	createdWorktree?: CreatedWorktree_Deserialize | null,
+	notes?: string,
 };
 
 export type Workspace_Serialize = {
@@ -396,6 +398,7 @@ export type Workspace_Serialize = {
 	path: string,
 	claudeSessionId: string | null,
 	createdWorktree: CreatedWorktree_Serialize | null,
+	notes: string,
 };
 
 /* Tauri Specta runtime */

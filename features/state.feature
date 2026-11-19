@@ -1,14 +1,16 @@
 Feature: Saved state
-  The workspace list and each session's conversation id survive a restart. A state file the app
-  cannot read is reported and never overwritten, so the user can repair it.
+  The workspace list and each session's conversation id and notes survive a restart. A state file
+  the app cannot read is reported and never overwritten, so the user can repair it.
 
   @core
   Scenario: Workspaces are remembered across a restart
     Given repositories "alpha" and "beta" are open as workspaces
     And "alpha" has a saved conversation id
+    And "alpha" has the notes "Halfway through the login fix"
     When the saved state is loaded again
     Then the workspaces "alpha" and "beta" are listed
     And "alpha" still has its conversation id
+    And "alpha" still has the notes "Halfway through the login fix"
 
   @core
   Scenario: An unreadable state file is reported and left untouched

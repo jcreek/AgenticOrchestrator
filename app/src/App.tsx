@@ -479,6 +479,7 @@ export default function App() {
             onRemove={removeMissing}
             onRetryStatus={retryStatus}
             onDirtyChange={setDirtyFor}
+            onNotesSaved={refreshWorkspaces}
           />
         ))}
       </main>

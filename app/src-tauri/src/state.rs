@@ -184,6 +184,18 @@ pub async fn reorder_workspaces(app: AppHandle, ids: Vec<String>) -> AppResult<(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn set_workspace_notes(app: AppHandle, id: String, notes: String) -> AppResult<()> {
+    blocking(move || {
+        app.state_ctx().mutate(|state| {
+            state::set_notes(state, &id, notes)
+                .ok_or_else(|| AppError::new(ErrorKind::NotFound, "no workspace with that id"))
+        })
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn update_settings(app: AppHandle, settings: Settings) -> AppResult<Settings> {
     blocking(move || {
         let saved = app.state_ctx().mutate(|state| {

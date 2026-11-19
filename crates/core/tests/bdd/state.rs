@@ -27,6 +27,13 @@ fn saved_conversation_id(world: &mut CoreWorld, name: String) {
     save(world);
 }
 
+#[given(expr = "{string} has the notes {string}")]
+fn saved_notes(world: &mut CoreWorld, name: String, notes: String) {
+    let id = world.state.workspaces.iter().find(|w| w.name == name).expect("workspace").id.clone();
+    state::set_notes(&mut world.state, &id, notes).expect("set notes");
+    save(world);
+}
+
 #[given("a saved state file that is not valid JSON")]
 fn invalid_state_file(world: &mut CoreWorld) {
     let path = world.state_path();
@@ -53,6 +60,12 @@ fn workspaces_listed(world: &mut CoreWorld, first: String, second: String) {
 fn still_has_id(world: &mut CoreWorld, name: String) {
     let workspace = world.state.workspaces.iter().find(|w| w.name == name).expect("workspace");
     assert_eq!(workspace.claude_session_id, world.saved_id);
+}
+
+#[then(expr = "{string} still has the notes {string}")]
+fn still_has_notes(world: &mut CoreWorld, name: String, notes: String) {
+    let workspace = world.state.workspaces.iter().find(|w| w.name == name).expect("workspace");
+    assert_eq!(workspace.notes, notes);
 }
 
 #[then("loading fails because the state file is not valid")]

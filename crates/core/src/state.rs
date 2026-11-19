@@ -45,6 +45,7 @@ pub struct Workspace {
     pub path: PathBuf,
     pub claude_session_id: Option<String>,
     pub created_worktree: Option<CreatedWorktree>,
+    pub notes: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -255,6 +256,7 @@ pub fn add_workspace<'a>(
         path: real_path,
         claude_session_id: None,
         created_worktree: None,
+        notes: String::new(),
     });
     Ok(&state.workspaces[index])
 }
@@ -262,6 +264,11 @@ pub fn add_workspace<'a>(
 pub fn remove_workspace(state: &mut AppState, id: &str) -> Option<Workspace> {
     let index = state.workspaces.iter().position(|w| w.id == id)?;
     Some(state.workspaces.remove(index))
+}
+
+pub fn set_notes(state: &mut AppState, id: &str, notes: String) -> Option<()> {
+    state.workspaces.iter_mut().find(|w| w.id == id)?.notes = notes;
+    Some(())
 }
 
 /// Puts the workspaces in the order of `ids`; any not named keep their order, after the rest.
@@ -351,6 +358,7 @@ mod tests {
         let state = load(&path).unwrap();
 
         assert_eq!(state.workspaces[0].claude_session_id, None);
+        assert_eq!(state.workspaces[0].notes, "");
         assert_eq!(state.settings.shell_program, Settings::default().shell_program);
         assert_eq!(state.settings.shell_args, ["-NoLogo"]);
         assert_eq!(state.settings.zoom_percent, 100);
@@ -380,6 +388,7 @@ mod tests {
                 repo_root: PathBuf::from(r"C:\main"),
                 branch: "feature".into(),
             }),
+            notes: "Halfway through the login fix.\nNext: tests.".into(),
         });
         state.settings.post_create_command = vec!["npm".into(), "ci".into()];
 
@@ -471,6 +480,18 @@ mod tests {
         assert_eq!(remove_workspace(&mut state, "unknown"), None);
         assert_eq!(remove_workspace(&mut state, &id).map(|w| w.id), Some(id));
         assert!(state.workspaces.is_empty());
+    }
+
+    #[test]
+    fn set_notes_updates_only_that_workspace() {
+        let workspace = |id: &str| Workspace { id: id.into(), ..Workspace::default() };
+        let mut state = AppState { workspaces: ["a", "b"].map(workspace).into(), ..AppState::default() };
+
+        assert_eq!(set_notes(&mut state, "b", "remember this".into()), Some(()));
+        assert_eq!(set_notes(&mut state, "unknown", "lost".into()), None);
+
+        let notes: Vec<_> = state.workspaces.iter().map(|w| w.notes.as_str()).collect();
+        assert_eq!(notes, ["", "remember this"]);
     }
 
     #[test]

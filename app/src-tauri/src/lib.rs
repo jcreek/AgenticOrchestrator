@@ -26,6 +26,7 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             state::add_workspace,
             state::remove_workspace,
             state::reorder_workspaces,
+            state::set_workspace_notes,
             state::update_settings,
             state::pick_folder,
             terminals::terminal_open,
