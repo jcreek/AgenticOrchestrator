@@ -1,10 +1,12 @@
 import { shortcutHints } from "../state/shortcuts";
 import { memo, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import type { TerminalInfo_Serialize, WorkspaceStatus_Serialize } from "../bindings";
+import { commands, type AppError, type TerminalInfo_Serialize, type WorkspaceStatus_Serialize } from "../bindings";
 import { NotesDialog } from "../dialogs/NotesDialog";
+import { toAppError } from "../ide/errors";
 import { IdePane } from "../ide/IdePane";
 import { clampShare, MAX_SHARE, MIN_SHARE, type Layout, type LayoutMode } from "../state/layout";
 import { KIND_LABEL, type ClaudeLaunch, type Summary, type Workspace } from "../state/model";
+import { platform } from "../state/platform";
 import { TerminalPane } from "../terminal/TerminalPane";
 import { SessionBanner } from "./SessionBanner";
 import "./SessionView.css";
@@ -28,6 +30,8 @@ interface Props {
   onNotesSaved: () => void;
 }
 
+const FILE_MANAGER = platform === "macos" ? "Finder" : "Explorer";
+
 const MODES: [LayoutMode, string][] = [
   ["terminal", "Terminal"],
   ["both", "Both"],
@@ -45,6 +49,7 @@ export const SessionView = memo(function SessionView(props: Props) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [ideMounted, setIdeMounted] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [folderError, setFolderError] = useState<AppError | null>(null);
   const notesPreview = workspace.notes.trim().split("\n")[0];
   const both = layout.mode === "both";
   const terminalFirst = layout.stacked ? layout.swapped : !layout.swapped;
@@ -73,6 +78,10 @@ export const SessionView = memo(function SessionView(props: Props) {
     onLayout(layout);
     setDragShare(null);
   };
+  const openFolder = () => {
+    setFolderError(null);
+    commands.openInFileManager(id).catch((caught: unknown) => setFolderError(toAppError(caught)));
+  };
   const onSeparatorKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const shrink = layout.stacked ? "ArrowUp" : "ArrowLeft";
     const grow = layout.stacked ? "ArrowDown" : "ArrowRight";
@@ -94,6 +103,14 @@ export const SessionView = memo(function SessionView(props: Props) {
           {workspace.path}
         </span>
         {summary && <span className="session-kind">{KIND_LABEL[summary.kind]}</span>}
+        <button type="button" className="btn-plain" onClick={openFolder}>
+          Show in {FILE_MANAGER}
+        </button>
+        {folderError && (
+          <span className="field-error" role="alert" title={folderError.message}>
+            {folderError.message}
+          </span>
+        )}
         <span className="session-space" />
         <button
           type="button"

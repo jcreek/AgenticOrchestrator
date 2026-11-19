@@ -56,6 +56,20 @@ pub async fn open_in_vscode(
     .await
 }
 
+/// Opens the workspace folder in Explorer on Windows or Finder on macOS.
+#[tauri::command]
+#[specta::specta]
+pub async fn open_in_file_manager(app: AppHandle, workspace_id: String) -> AppResult<()> {
+    let root = app.state_ctx().root(&workspace_id)?;
+    blocking(move || {
+        files::file_manager_command(&root)
+            .spawn()
+            .map(drop)
+            .map_err(|error| AppError::new(ErrorKind::Io, error.to_string()))
+    })
+    .await
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolCheck {

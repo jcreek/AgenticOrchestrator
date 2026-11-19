@@ -237,6 +237,21 @@ fn version_of(bytes: &[u8]) -> String {
     format!("{:x}-{:016x}", bytes.len(), hasher.finish())
 }
 
+#[cfg(windows)]
+const FILE_MANAGER: &str = "explorer.exe";
+#[cfg(target_os = "macos")]
+const FILE_MANAGER: &str = "open";
+#[cfg(all(unix, not(target_os = "macos")))]
+const FILE_MANAGER: &str = "xdg-open";
+
+/// Opens `folder` in Explorer, Finder or the desktop's file manager. Spawn it without waiting:
+/// Explorer exits with status 1 even when it succeeds.
+pub fn file_manager_command(folder: &Path) -> std::process::Command {
+    let mut command = crate::git::hidden_command(FILE_MANAGER);
+    command.arg(folder).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null());
+    command
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,6 +259,14 @@ mod tests {
     #[cfg(windows)]
     use std::process::Command;
     use tempfile::TempDir;
+
+    #[test]
+    fn file_manager_command_passes_the_folder_as_its_only_argument() {
+        let folder = Path::new("my repo (1)");
+        let command = file_manager_command(folder);
+        assert_eq!(command.get_program(), FILE_MANAGER);
+        assert_eq!(command.get_args().collect::<Vec<_>>(), [folder.as_os_str()]);
+    }
 
     fn workspace() -> TempDir {
         tempfile::tempdir().unwrap()

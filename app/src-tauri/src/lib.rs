@@ -59,6 +59,7 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             worktrees::worktree_removal_blockers,
             worktrees::remove_worktree,
             misc::open_in_vscode,
+            misc::open_in_file_manager,
             misc::check_tools,
             misc::detect_nerd_font,
             misc::check_for_update,

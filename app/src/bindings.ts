@@ -78,6 +78,8 @@ export const commands = {
 	removeWorktree: (workspaceId: string, accepted: Blocker[], options?: InvokeOptions) => __TAURI_INVOKE<CommandOutput | null>("remove_worktree", { workspaceId, accepted }, options),
 	/**  Opens the workspace folder in VS Code, optionally at a file and line. */
 	openInVscode: (workspaceId: string, relPath: string | null, line: number | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("open_in_vscode", { workspaceId, relPath, line }, options),
+	/**  Opens the workspace folder in Explorer on Windows or Finder on macOS. */
+	openInFileManager: (workspaceId: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("open_in_file_manager", { workspaceId }, options),
 	/**  First-run check: which of the tools the app relies on are on PATH. */
 	checkTools: (options?: InvokeOptions) => __TAURI_INVOKE<ToolCheck>("check_tools", undefined, options),
 	/**  An installed Nerd Font family for the terminal, or `None` when there is none. */
