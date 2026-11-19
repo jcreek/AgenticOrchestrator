@@ -33,9 +33,9 @@ class VersionTests(unittest.TestCase):
             output = Path(directory, "output")
             event.write_text(json.dumps({"before": "push-base"}))
             env = {"GITHUB_EVENT_PATH": str(event), "GITHUB_OUTPUT": str(output), "GITHUB_EVENT_NAME": "push", "GITHUB_SHA": "head", "GITHUB_REPOSITORY": "owner/repo"}
-            with patch.dict(os.environ, env), patch.object(release, "validate_versions", return_value="0.2.0"), patch.object(release, "run", return_value='[package]\nversion="0.1.0"') as run, patch.object(release, "verify_tag", return_value=False), patch.object(release, "existing_release", return_value=None):
+            with patch.dict(os.environ, env), patch.object(release, "validate_versions", return_value="0.2.0"), patch.object(release, "previous_version", return_value="0.1.0") as previous, patch.object(release, "verify_tag", return_value=False), patch.object(release, "existing_release", return_value=None):
                 release.gate()
-                run.assert_called_once_with("git", "show", "push-base:app/src-tauri/Cargo.toml")
+                previous.assert_called_once_with("push-base")
             self.assertIn("release=true", output.read_text())
 
     def test_unchanged_push_skips_packaging(self):
@@ -44,7 +44,7 @@ class VersionTests(unittest.TestCase):
             output = Path(directory, "output")
             event.write_text(json.dumps({"before": "push-base"}))
             env = {"GITHUB_EVENT_PATH": str(event), "GITHUB_OUTPUT": str(output), "GITHUB_EVENT_NAME": "push"}
-            with patch.dict(os.environ, env), patch.object(release, "validate_versions", return_value="0.2.0"), patch.object(release, "run", return_value='[package]\nversion="0.2.0"'), patch.object(release, "existing_release") as lookup:
+            with patch.dict(os.environ, env), patch.object(release, "validate_versions", return_value="0.2.0"), patch.object(release, "previous_version", return_value="0.2.0"), patch.object(release, "existing_release") as lookup:
                 release.gate()
                 lookup.assert_not_called()
             self.assertIn("release=false", output.read_text())
@@ -58,6 +58,29 @@ class VersionTests(unittest.TestCase):
             with patch.dict(os.environ, env), patch.object(release, "validate_versions", return_value="0.2.0"), patch.object(release, "verify_tag", return_value=False), patch.object(release, "existing_release", return_value=None):
                 release.gate()
             self.assertIn("release=true", output.read_text())
+
+    def test_missing_push_base_is_fetched_before_reading_manifest(self):
+        missing = subprocess.CompletedProcess([], 1)
+        with patch.object(subprocess, "run", return_value=missing), patch.object(release, "run", side_effect=["", '[package]\nversion="0.3.3"']) as run:
+            self.assertEqual(release.previous_version("old-sha"), "0.3.3")
+        self.assertEqual([call.args for call in run.call_args_list], [
+            ("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential", "fetch", "--no-tags", "origin", "old-sha"),
+            ("git", "show", "old-sha:app/src-tauri/Cargo.toml"),
+        ])
+
+    def test_available_push_base_does_not_fetch(self):
+        present = subprocess.CompletedProcess([], 0)
+        with patch.object(subprocess, "run", return_value=present), patch.object(release, "run", return_value='[package]\nversion="0.3.3"') as run:
+            self.assertEqual(release.previous_version("old-sha"), "0.3.3")
+            run.assert_called_once_with("git", "show", "old-sha:app/src-tauri/Cargo.toml")
+
+    def test_push_base_fetch_failure_is_not_ignored(self):
+        with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 1)), patch.object(release, "run", side_effect=subprocess.CalledProcessError(128, "git fetch")), self.assertRaises(subprocess.CalledProcessError):
+            release.previous_version("old-sha")
+
+    def test_missing_manifest_is_not_treated_as_initial_release(self):
+        with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0)), patch.object(release, "run", side_effect=subprocess.CalledProcessError(128, "git show")), self.assertRaises(subprocess.CalledProcessError):
+            release.previous_version("old-sha")
 
     def test_conflicting_tag_fails(self):
         result = subprocess.CompletedProcess([], 0, stdout="other-commit\n")
