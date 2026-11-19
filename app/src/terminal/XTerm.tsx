@@ -12,6 +12,7 @@ import { useSettings } from "../state/settings";
 import { matchShortcut } from "../state/shortcuts";
 import { chunkText } from "./chunk";
 import { terminalFontFamily } from "./font";
+import { OSC52, osc52Text } from "./osc52";
 import { onThemeChange, terminalTheme } from "./theme";
 
 export type TerminalSource = ClaudeSource;
@@ -106,6 +107,12 @@ export function XTerm(props: Props) {
 
     term.onData(send);
     term.onResize(({ cols, rows }) => resize(cols, rows));
+    // Claude Code copies its own selection by sending OSC 52, expecting the terminal to set the clipboard.
+    term.parser.registerOscHandler(OSC52, (data) => {
+      const text = osc52Text(data);
+      if (text !== null) navigator.clipboard.writeText(text).catch(() => undefined);
+      return true;
+    });
     term.attachCustomKeyEventHandler((event) => {
       if (event.type !== "keydown") return true;
       if (matchShortcut(event, true)) return false;
