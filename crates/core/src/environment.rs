@@ -27,6 +27,24 @@ pub fn environment() -> &'static Environment {
     })
 }
 
+/// The search path; Windows names the variable `Path`, and its names are case-insensitive.
+pub fn path_variable(env: &Environment) -> Option<&std::ffi::OsStr> {
+    env.iter()
+        .find(|(key, _)| if cfg!(windows) { key.eq_ignore_ascii_case("PATH") } else { *key == "PATH" })
+        .map(|(_, value)| value.as_os_str())
+}
+
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+
+    #[test]
+    fn path_variable_matches_windows_casing() {
+        let env = Environment::from([("Path".into(), r"C:\tools".into())]);
+        assert_eq!(path_variable(&env), Some(std::ffi::OsStr::new(r"C:\tools")));
+    }
+}
+
 /// Native CLI installers use ~/.local/bin, which a desktop launch or a non-interactive
 /// login shell may omit. Keep configured PATH entries ahead of this fallback.
 #[cfg(unix)]

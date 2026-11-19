@@ -41,7 +41,7 @@ pub async fn open_in_vscode(
             ));
         }
         let env = orchestrator_core::environment::environment();
-        let code = which::which_in("code", env.get(std::ffi::OsStr::new("PATH")), &root)
+        let code = which::which_in("code", orchestrator_core::environment::path_variable(env), &root)
             .map_err(|_| AppError::new(ErrorKind::ToolMissing, "VS Code ('code') is not on PATH"))?;
         git::hidden_command(code)
             .args(&args)
@@ -95,7 +95,7 @@ pub async fn check_for_update(app: AppHandle) -> AppResult<Option<update::Update
 
 fn tool_exists(program: &str) -> bool {
     let env = orchestrator_core::environment::environment();
-    which::which_in(program, env.get(std::ffi::OsStr::new("PATH")), std::env::current_dir().unwrap_or_default()).is_ok()
+    which::which_in(program, orchestrator_core::environment::path_variable(env), std::env::current_dir().unwrap_or_default()).is_ok()
 }
 
 #[cfg(test)]
