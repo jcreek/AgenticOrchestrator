@@ -63,6 +63,19 @@ def expected_uploaded_assets(version):
     return {name.replace(" ", ".") for name in expected_assets(version)}
 
 
+def previous_version(before):
+    # A force-push can leave event.before outside every fetched branch/tag.
+    # Fetch that exact commit rather than treating it as an initial release.
+    present = subprocess.run(
+        ["git", "cat-file", "-e", f"{before}^{{commit}}"],
+        capture_output=True, text=True,
+    )
+    if present.returncode != 0:
+        # checkout disables persisted credentials; gh uses the job GH_TOKEN.
+        run("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential", "fetch", "--no-tags", "origin", before)
+    return tomllib.loads(run("git", "show", f"{before}:app/src-tauri/Cargo.toml"))["package"]["version"]
+
+
 def gate():
     version = validate_versions(Path("app/src-tauri/Cargo.toml").read_text(), Path("app/package.json").read_text(), Path("Cargo.lock").read_text())
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
@@ -70,7 +83,7 @@ def gate():
     if not should_release:
         before = event.get("before", "")
         if before and set(before) != {"0"}:
-            previous = tomllib.loads(run("git", "show", f"{before}:app/src-tauri/Cargo.toml"))["package"]["version"]
+            previous = previous_version(before)
             should_release = increased(version, previous)
         else:
             print("No previous commit; use a manual run to publish the initial version.")
