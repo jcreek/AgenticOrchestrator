@@ -11,6 +11,7 @@ import {
   type StatusChanged_Serialize,
   type TerminalInfo_Serialize,
   type ToolCheck,
+  type Update,
 } from "./bindings";
 import { CloseSessionDialog } from "./dialogs/CloseSessionDialog";
 import { NewSessionDialog } from "./dialogs/NewSessionDialog";
@@ -59,6 +60,7 @@ export default function App() {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [tools, setTools] = useState<ToolCheck | null>(null);
   const [nerdFont, setNerdFont] = useState<string | null>(null);
+  const [update, setUpdate] = useState<Update | null>(null);
   const [toolsDismissed, setToolsDismissed] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
   const [batch, dispatchBatch] = useReducer(batchReducer, initialBatch);
@@ -132,6 +134,7 @@ export default function App() {
     void load();
     commands.checkTools().then(setTools, () => undefined);
     commands.detectNerdFont().then(setNerdFont, () => undefined);
+    commands.checkForUpdate().then(setUpdate, () => undefined);
     commands.getStatuses().then(setStatuses, () => undefined);
     const unlisten = events.statusChanged.listen((event) => setStatuses(event.payload));
     return () => {
@@ -414,6 +417,7 @@ export default function App() {
         onReorder={reorder}
         onNewSession={() => setDialog({ type: "new" })}
         onSettings={() => setDialog({ type: "settings" })}
+        updateAvailable={update !== null}
       />
       {missingTools.length > 0 && !toolsDismissed && (
         <div className="banner banner-warning" role="alert">
@@ -548,7 +552,7 @@ export default function App() {
         />
       )}
       {dialog?.type === "settings" && (
-        <SettingsDialog settings={settings} nerdFont={nerdFont} onSave={updateSettings} onClose={() => setDialog(null)} />
+        <SettingsDialog settings={settings} nerdFont={nerdFont} update={update} onSave={updateSettings} onClose={() => setDialog(null)} />
       )}
     </div>
     </SettingsContext.Provider>

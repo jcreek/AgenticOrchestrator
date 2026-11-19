@@ -13,6 +13,7 @@ serde_json = "1"
 specta = { version = "=2.0.0-rc.28", features = ["derive"], optional = true }
 tempfile = "3.27.0"
 thiserror = "2.0.21"
+ureq = { version = "3.5.2", features = ["json"] }
 uuid = { version = "1.29.2", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]

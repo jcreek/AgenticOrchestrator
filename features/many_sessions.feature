@@ -12,6 +12,17 @@ Feature: Many sessions
     And the "beta" group has a label followed by tabs for "main" and "feature"
 
   @ui
+  Scenario: Collapsing a repository group hides its tabs and shows how many it holds
+    Given a session open in repository "alpha"
+    And a session open in repository "beta"
+    And a session open in a new worktree of "beta" on the branch "feature"
+    And I am viewing the "alpha" session
+    When I collapse the "beta" group
+    Then the "beta" group shows only its label with 2 sessions
+    When I expand the "beta" group
+    Then the "beta" group has a label followed by tabs for "main" and "feature"
+
+  @ui
   Scenario Outline: The window controls stay fully visible and usable with many sessions open
     Given 32 folders are open as sessions
     And the window is <width> pixels wide

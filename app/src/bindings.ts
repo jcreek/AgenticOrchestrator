@@ -81,6 +81,8 @@ export const commands = {
 	checkTools: (options?: InvokeOptions) => __TAURI_INVOKE<ToolCheck>("check_tools", undefined, options),
 	/**  An installed Nerd Font family for the terminal, or `None` when there is none. */
 	detectNerdFont: (options?: InvokeOptions) => __TAURI_INVOKE<string | null>("detect_nerd_font", undefined, options),
+	/**  The newer release on GitHub, or `None` when this is the latest or the check fails. */
+	checkForUpdate: (options?: InvokeOptions) => __TAURI_INVOKE<Update | null>("check_for_update", undefined, options),
 };
 
 /** Events */
@@ -323,6 +325,11 @@ export type ToolCheck = {
 	claude: boolean,
 	git: boolean,
 	code: boolean,
+};
+
+export type Update = {
+	version: string,
+	url: string,
 };
 
 export type WhereToRun = "folder" | "worktree";

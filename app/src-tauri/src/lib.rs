@@ -60,6 +60,7 @@ fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             misc::open_in_vscode,
             misc::check_tools,
             misc::detect_nerd_font,
+            misc::check_for_update,
         ])
         .events(collect_events![
             status::StatusChanged,
@@ -116,6 +117,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);

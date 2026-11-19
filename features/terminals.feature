@@ -51,6 +51,13 @@ Feature: Terminals
     Then the shell tab shows that it exited
 
   @ui
+  Scenario: Ctrl+C copies the terminal selection to the clipboard
+    Given a session open in repository "alpha"
+    And I type "copy-me" into Claude's terminal in "alpha"
+    When I select the terminal's text with the mouse and press Ctrl+C
+    Then the clipboard contains "copy-me"
+
+  @ui
   Scenario: Ctrl+W in a terminal goes to the program, not to the app
     Given a session open in repository "alpha"
     When I press Ctrl+W in Claude's terminal in "alpha"

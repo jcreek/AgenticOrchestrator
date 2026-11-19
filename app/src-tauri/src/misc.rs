@@ -1,6 +1,6 @@
 use std::process::Stdio;
 
-use orchestrator_core::{files, fonts, git, state};
+use orchestrator_core::{files, fonts, git, state, update};
 use serde::Serialize;
 use tauri::AppHandle;
 
@@ -83,6 +83,14 @@ pub async fn check_tools() -> AppResult<ToolCheck> {
 #[specta::specta]
 pub async fn detect_nerd_font() -> AppResult<Option<String>> {
     blocking(|| Ok(fonts::nerd_font_family(&fonts::installed_font_names()))).await
+}
+
+/// The newer release on GitHub, or `None` when this is the latest or the check fails.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_for_update(app: AppHandle) -> AppResult<Option<update::Update>> {
+    let current = app.package_info().version.to_string();
+    blocking(move || Ok(update::available_update(&current))).await
 }
 
 fn tool_exists(program: &str) -> bool {

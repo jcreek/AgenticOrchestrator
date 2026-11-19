@@ -1,5 +1,6 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { assertStopped } from "../support/app.mjs";
 import { sessionProcesses } from "../support/sessions.mjs";
 import { click, clickButton, expectTerminalShows, find, press, typeIntoTerminal, view } from "../support/ui.mjs";
@@ -79,5 +80,28 @@ Then("I am asked {string}", async function (title) {
     const shown = await find(this, "$.dialog()?.getAttribute('aria-label') ?? null");
     if (shown === title) return true;
     throw new Error(`the open dialog is ${JSON.stringify(shown)}`);
+  });
+});
+
+const powershell = (command) => execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], { encoding: "utf8" });
+
+When("I select the terminal's text with the mouse and press Ctrl+C", async function () {
+  powershell("Set-Clipboard -Value 'not copied yet'");
+  const box = await find(this, "(() => { const r = $.terminal().getBoundingClientRect(); return { left: r.left + 2, top: r.top + 2, right: r.right - 4, bottom: r.bottom - 4 }; })()");
+  const mouse = (type, x, y, buttons) => this.app.cdp.send("Input.dispatchMouseEvent", { type, x, y, button: "left", buttons, clickCount: 1 });
+  await mouse("mouseMoved", box.left, box.top, 0);
+  await mouse("mousePressed", box.left, box.top, 1);
+  for (let step = 1; step <= 5; step += 1) {
+    await mouse("mouseMoved", box.left + ((box.right - box.left) * step) / 5, box.top + ((box.bottom - box.top) * step) / 5, 1);
+  }
+  await mouse("mouseReleased", box.right, box.bottom, 0);
+  await press(this, "c", { ctrl: true });
+});
+
+Then("the clipboard contains {string}", async function (text) {
+  await until(`the clipboard to contain "${text}"`, () => {
+    const clipboard = powershell("Get-Clipboard -Raw");
+    if (clipboard.includes(text)) return true;
+    throw new Error(`the clipboard holds ${JSON.stringify(clipboard.slice(0, 200))}`);
   });
 });

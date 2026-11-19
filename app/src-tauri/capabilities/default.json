@@ -4,6 +4,7 @@
   "description": "Main window: app commands, events, and the custom title bar's window controls",
   "windows": ["main"],
   "permissions": [
+    "core:app:allow-version",
     "core:event:default",
     "core:window:allow-start-dragging",
     "core:window:allow-internal-toggle-maximize",
@@ -11,6 +12,10 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-destroy",
-    "core:window:allow-is-maximized"
+    "core:window:allow-is-maximized",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://github.com/jcreek/AgenticOrchestrator/releases/*" }]
+    }
   ]
 }

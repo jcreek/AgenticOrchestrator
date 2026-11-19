@@ -178,3 +178,21 @@ Then("the {string} group has a label followed by tabs for {string} and {string}"
     throw new Error(`the group shows ${json(found)}`);
   });
 });
+
+When(/^I (collapse|expand) the "([^"]*)" group$/, async function (action, group) {
+  const label = `document.querySelector('[role=group][aria-label=${json(group)}] .tab-group-label')`;
+  await click(this, label, `the "${group}" group label`);
+  const expanded = action === "expand";
+  await until(`the "${group}" group to be ${action}ed`, () => find(this, `${label}?.getAttribute('aria-expanded') === '${expanded}'`));
+});
+
+Then("the {string} group shows only its label with {int} sessions", async function (group, count) {
+  await until(`the "${group}" group to be collapsed`, async () => {
+    const found = await find(this, `(() => {
+      const element = document.querySelector('[role=group][aria-label=${json(group)}]');
+      return element && { children: element.children.length, count: element.querySelector('.tab-group-count')?.innerText };
+    })()`);
+    if (json(found) === json({ children: 1, count: String(count) })) return true;
+    throw new Error(`the group shows ${json(found)}`);
+  });
+});

@@ -4,7 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { type PointerEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { SessionTab } from "../state/model";
 import type { TabGroup } from "../state/order";
-import { hiddenTabs, isMerged, revealScroll } from "../state/tabStrip";
+import { collapsedHidden, hiddenTabs, isMerged, revealScroll, shownTabs } from "../state/tabStrip";
 import { OverflowMenu } from "./OverflowMenu";
 import { SessionTabButton } from "./SessionTabButton";
 import "./TitleBar.css";
@@ -22,6 +22,7 @@ interface Props {
   onReorder: (draggedId: string, targetId: string) => void;
   onNewSession: () => void;
   onSettings: () => void;
+  updateAvailable?: boolean;
 }
 
 interface TabDrag {
@@ -59,11 +60,12 @@ function OverviewIcon() {
   );
 }
 
-export function TitleBar({ groups, activeId, needYou, now, showTabs = true, inert = false, onOverview, onSelect, onReorder, onNewSession, onSettings }: Props) {
+export function TitleBar({ groups, activeId, needYou, now, showTabs = true, inert = false, onOverview, onSelect, onReorder, onNewSession, onSettings, updateAvailable = false }: Props) {
   const stripRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<StripView>(NO_OVERFLOW);
   const pressed = useRef<{ id: string; x: number; y: number } | null>(null);
   const [drag, setDrag] = useState<TabDrag | null>(null);
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
   const endDrag = () => {
     pressed.current = null;
@@ -87,6 +89,13 @@ export function TitleBar({ groups, activeId, needYou, now, showTabs = true, iner
   const movesGroup = !!drag?.overId && !!dragGroup && !dragGroup.items.some((tab) => tab.id === drag.overId);
   const isDragging = (group: TabGroup<SessionTab>, id: string) => !!drag && (id === drag.id || (movesGroup && group === dragGroup));
   const layoutKey = groups.map((group) => `${group.key}:${group.items.map((tab) => tab.id).join()}`).join("|");
+  const hidden = [...view.hidden, ...collapsedHidden(groups, collapsed, activeId)];
+  const toggleGroup = (key: string) =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
 
   const measure = useCallback(() => {
     const strip = stripRef.current;
@@ -125,7 +134,7 @@ export function TitleBar({ groups, activeId, needYou, now, showTabs = true, iner
     return () => observer.disconnect();
   }, [revealActive, showTabs]);
 
-  useLayoutEffect(() => revealActive(), [activeId, layoutKey, revealActive]);
+  useLayoutEffect(() => revealActive(), [activeId, layoutKey, collapsed, revealActive]);
 
   const stripClass = ["tab-strip", view.fadeStart && "tab-strip-fade-start", view.fadeEnd && "tab-strip-fade-end", drag && "tab-strip-dragging"];
   return (
@@ -171,7 +180,8 @@ export function TitleBar({ groups, activeId, needYou, now, showTabs = true, iner
           >
             {groups.map((group) => {
               const merged = isMerged(group);
-              const tabs = group.items.map((tab) => (
+              const isCollapsed = !merged && collapsed.has(group.key);
+              const tabs = shownTabs(group.items, isCollapsed, activeId).map((tab) => (
                 <SessionTabButton
                   key={tab.id}
                   tab={tab}
@@ -185,23 +195,47 @@ export function TitleBar({ groups, activeId, needYou, now, showTabs = true, iner
                 />
               ));
               if (merged) return tabs[0];
+              const needYouInside = group.items.filter((tab) => tab.id !== activeId && tab.presentation.needsYou).length;
               return (
                 <div key={group.key} className="tab-group" role="group" aria-label={group.name}>
-                  <span className="tab-group-label" title={group.name} data-tauri-drag-region>
-                    {group.name}
-                  </span>
+                  <button
+                    type="button"
+                    className="tab-group-label"
+                    aria-expanded={!isCollapsed}
+                    title={isCollapsed ? `Expand ${group.name} (${group.items.length} sessions)` : `Collapse ${group.name}`}
+                    onClick={() => toggleGroup(group.key)}
+                  >
+                    <svg className="tab-group-chevron" width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                      <path d="M2 1l3 3-3 3" />
+                    </svg>
+                    <span className="tab-group-name">{group.name}</span>
+                    {isCollapsed && <span className="tab-group-count">{group.items.length}</span>}
+                    {isCollapsed && needYouInside > 0 && (
+                      <span className="attention-badge" aria-label={`${needYouInside} need you`}>
+                        {needYouInside}
+                      </span>
+                    )}
+                  </button>
                   {tabs}
                 </div>
               );
             })}
           </div>
-          <OverflowMenu groups={groups} activeId={activeId} hidden={view.hidden} now={now} inert={inert} onSelect={onSelect} />
+          <OverflowMenu groups={groups} activeId={activeId} hidden={hidden} now={now} inert={inert} onSelect={onSelect} />
           <button type="button" className="new-session" inert={inert} aria-label="New session" title={shortcutHints("New session (Ctrl+N)")} onClick={onNewSession}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
               <path d="M6 1v10M1 6h10" />
             </svg>
           </button>
-          <button type="button" className="new-session" inert={inert} aria-label="Settings" title="Settings" onClick={onSettings}>
+          <button
+            type="button"
+            className="new-session settings-button"
+            inert={inert}
+            aria-label={updateAvailable ? "Settings, update available" : "Settings"}
+            title={updateAvailable ? "Settings (update available)" : "Settings"}
+            onClick={onSettings}
+          >
+            {updateAvailable && <span className="update-dot" aria-hidden="true" />}
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
               <circle cx="8" cy="8" r="2.5" />
               <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />

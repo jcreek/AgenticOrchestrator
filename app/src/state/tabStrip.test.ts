@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeTab, hiddenTabs, isMerged, overflowCounts, revealScroll, tabText } from "./tabStrip";
+import { collapsedHidden, describeTab, hiddenTabs, isMerged, overflowCounts, revealScroll, shownTabs, tabText } from "./tabStrip";
 
 const repoTab = { branch: "main", group: { key: "k", name: "web-console" } };
 const folderTab = { branch: "notes", group: null };
@@ -8,6 +8,29 @@ describe("isMerged", () => {
   it("merges a group with one session and labels larger groups", () => {
     expect(isMerged({ items: [1] })).toBe(true);
     expect(isMerged({ items: [1, 2] })).toBe(false);
+  });
+});
+
+describe("collapsing a group", () => {
+  const tabs = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  const groups = [
+    { key: "web", items: tabs },
+    { key: "api", items: [{ id: "d" }, { id: "e" }] },
+  ];
+
+  it("shows every tab of an expanded group", () => {
+    expect(shownTabs(tabs, false, "b")).toEqual(tabs);
+  });
+
+  it("keeps only the active tab of a collapsed group in view", () => {
+    expect(shownTabs(tabs, true, "b")).toEqual([{ id: "b" }]);
+    expect(shownTabs(tabs, true, "d")).toEqual([]);
+  });
+
+  it("reports the tabs hidden by collapsed groups only", () => {
+    expect(collapsedHidden(groups, new Set(["web"]), "b")).toEqual(["a", "c"]);
+    expect(collapsedHidden(groups, new Set(["web", "api"]), null)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(collapsedHidden(groups, new Set(), "b")).toEqual([]);
   });
 });
 

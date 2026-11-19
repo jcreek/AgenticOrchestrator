@@ -5,6 +5,7 @@ pub mod git;
 pub mod state;
 pub mod status;
 pub mod terminal;
+pub mod update;
 pub mod watch;
 pub mod worktrees;
 pub mod processes;

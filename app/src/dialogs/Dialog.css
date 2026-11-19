@@ -58,6 +58,16 @@
   color: var(--color-text-muted);
 }
 
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .field {
   flex: 1 1 0;
   min-width: 0;

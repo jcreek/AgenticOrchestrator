@@ -1,18 +1,20 @@
 import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
-import type { DiffLayout, LayoutMode, Settings_Serialize, WhereToRun } from "../bindings";
+import type { DiffLayout, LayoutMode, Settings_Serialize, Update, WhereToRun } from "../bindings";
 import { Dialog } from "./Dialog";
 
 interface Props {
   settings: Settings_Serialize;
   nerdFont: string | null;
+  update: Update | null;
   onSave: (changes: Partial<Settings_Serialize>) => void;
   onClose: () => void;
 }
 
 const ZOOM_PERCENTS = [100, 110, 125, 150, 175, 200];
 
-export function SettingsDialog({ settings, nerdFont, onSave, onClose }: Props) {
+export function SettingsDialog({ settings, nerdFont, update, onSave, onClose }: Props) {
   const [zoomPercent, setZoomPercent] = useState(settings.zoomPercent);
   const [terminalFont, setTerminalFont] = useState(settings.terminalFont);
   const [defaultLayout, setDefaultLayout] = useState(settings.defaultLayout);
@@ -32,7 +34,17 @@ export function SettingsDialog({ settings, nerdFont, onSave, onClose }: Props) {
   const zoomOptions = [...new Set([...ZOOM_PERCENTS, zoomPercent])].sort((a, b) => a - b);
   const footer = (
     <>
-      <span className="dialog-footer-note">{version && `Version ${version}`}</span>
+      <span className="dialog-footer-note">
+        {version && `Version ${version}`}
+        {update && (
+          <>
+            {" · "}
+            <button type="button" className="link-button" onClick={() => void openUrl(update.url)}>
+              {update.version} available
+            </button>
+          </>
+        )}
+      </span>
       <button type="button" className="btn" onClick={onClose}>
         Cancel <span className="kbd">Esc</span>
       </button>

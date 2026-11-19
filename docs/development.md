@@ -137,7 +137,7 @@ Ordinary pushes do not build installers. Mismatched versions, a stale app lockfi
 
 For an initial release without a bump, open **Actions → Desktop release → Run workflow** on `main`. This also permits retrying the current unpublished version. Prefer **Re-run failed jobs** on the original run after a failure, so the release still targets the original commit. An interrupted publication leaves a draft; retrying replaces its installer assets before publishing it. A draft without a materialized tag must target the exact commit being built. Build artifacts remain downloadable from the run for 14 days, including when a different platform fails.
 
-The workflow serializes releases; GitHub concurrency retains at most one pending run, so avoid pushing several version bumps while a release is running. Windows distribution signing, macOS Developer ID signing and notarisation remain excluded; macOS uses an ad-hoc bundle signature. The app does not update itself.
+The workflow serializes releases; GitHub concurrency retains at most one pending run, so avoid pushing several version bumps while a release is running. Windows distribution signing, macOS Developer ID signing and notarisation remain excluded; macOS uses an ad-hoc bundle signature. The app does not update itself; it checks GitHub for a newer release at startup and links to it from Settings.
 
 Test the release logic locally with `python3 -m unittest discover -s .github/scripts -p 'test_*.py'` (Python 3.11+).
 

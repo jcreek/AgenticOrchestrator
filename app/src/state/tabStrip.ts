@@ -3,6 +3,23 @@ export function isMerged(group: { items: unknown[] }): boolean {
   return group.items.length === 1;
 }
 
+/** A collapsed group still shows its active tab, so the session in use never leaves the strip. */
+export function shownTabs<T extends { id: string }>(items: T[], collapsed: boolean, activeId: string | null): T[] {
+  return collapsed ? items.filter((tab) => tab.id === activeId) : items;
+}
+
+export function collapsedHidden(
+  groups: { key: string; items: { id: string }[] }[],
+  collapsed: ReadonlySet<string>,
+  activeId: string | null,
+): string[] {
+  return groups.flatMap((group) => {
+    if (!collapsed.has(group.key)) return [];
+    const shown = new Set(shownTabs(group.items, true, activeId));
+    return group.items.filter((tab) => !shown.has(tab)).map((tab) => tab.id);
+  });
+}
+
 export interface TextSource {
   branch: string;
   group: unknown;
